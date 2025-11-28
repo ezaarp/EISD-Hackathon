@@ -1,25 +1,54 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { markAttendance } from '@/app/actions/komdis';
 import { PixelCard, PixelButton } from '@/components/ui';
 import { Check, X, Clock } from 'lucide-react';
+import { createClient } from '@/lib/supabase';
 
 export default function AttendanceManager({ session, students, attendances }: { session: any, students: any[], attendances: any[] }) {
   const [loading, setLoading] = useState<string | null>(null);
   const [localAttendances, setLocalAttendances] = useState(attendances);
 
+  // Initialize Supabase for realtime updates if needed, though Komdis usually initiates
+  // But if another Komdis updates, we want to see it.
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+
+  useEffect(() => {
+      const channel = supabase.channel(`live-${session.id}`)
+        .on('postgres_changes', { 
+            event: 'INSERT', 
+            schema: 'public', 
+            table: 'Attendance', 
+            filter: `liveSessionId=eq.${session.id}` 
+        }, (payload) => {
+            setLocalAttendances(prev => [...prev, payload.new]);
+        })
+        .on('postgres_changes', { 
+            event: 'UPDATE', 
+            schema: 'public', 
+            table: 'Attendance', 
+            filter: `liveSessionId=eq.${session.id}` 
+        }, (payload) => {
+            setLocalAttendances(prev => prev.map(a => a.id === payload.new.id ? payload.new : a));
+        })
+        .subscribe();
+
+      return () => { supabase.removeChannel(channel); };
+  }, [session.id]);
+
   const handleMark = async (studentId: string, status: 'PRESENT' | 'LATE' | 'ABSENT') => {
       setLoading(studentId);
       try {
           await markAttendance(session.id, studentId, status);
-          // Optimistic update
+          // Optimistic update handled by local state or realtime?
+          // Let's do optimistic for immediate feedback
           setLocalAttendances(prev => {
               const existing = prev.find(a => a.studentId === studentId);
               if (existing) {
                   return prev.map(a => a.studentId === studentId ? { ...a, status } : a);
               } else {
-                  return [...prev, { studentId, status }];
+                  return [...prev, { studentId, status, liveSessionId: session.id }];
               }
           });
       } catch (e) {
@@ -92,4 +121,3 @@ export default function AttendanceManager({ session, students, attendances }: { 
       </PixelCard>
   );
 }
-

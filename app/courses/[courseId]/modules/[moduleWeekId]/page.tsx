@@ -6,8 +6,10 @@ import { PixelCard, PixelButton } from '@/components/ui';
 import { redirect } from 'next/navigation';
 import { FileText, Download, Upload, Radio, CheckCircle } from 'lucide-react';
 import { getActiveSessionForStudent } from '@/app/actions/live-session';
+import PDFViewer from '@/components/ui/PDFViewer';
 
-export default async function ModuleDetailPage({ params }: { params: { courseId: string, moduleWeekId: string } }) {
+export default async function ModuleDetailPage(props: { params: Promise<{ courseId: string, moduleWeekId: string }> }) {
+  const params = await props.params;
   const session = await getServerSession(authOptions);
   if (!session) return redirect('/login');
 
@@ -76,25 +78,32 @@ export default async function ModuleDetailPage({ params }: { params: { courseId:
               {/* Materials */}
               <section>
                   <h2 className="text-xl font-pixel text-emerald-400 mb-4">MATERIALS</h2>
-                  <div className="space-y-4">
+                  <div className="space-y-8">
                       {moduleWeek.contents.length === 0 ? (
                           <p className="text-slate-500 italic">No materials uploaded yet.</p>
                       ) : (
                           moduleWeek.contents.map(content => (
-                              <div key={content.id} className="bg-slate-800 border border-slate-700 p-4 flex items-center justify-between hover:border-emerald-500 transition-colors">
-                                  <div className="flex items-center gap-4">
-                                      <div className="bg-slate-900 p-3">
-                                          <FileText className="text-emerald-400" />
+                              <div key={content.id} className="space-y-2">
+                                  <div className="bg-slate-800 border border-slate-700 p-4 flex items-center justify-between">
+                                      <div className="flex items-center gap-4">
+                                          <div className="bg-slate-900 p-3">
+                                              <FileText className="text-emerald-400" />
+                                          </div>
+                                          <div>
+                                              <h3 className="font-bold text-white">{content.title}</h3>
+                                              <p className="text-xs text-slate-400 uppercase">{content.type}</p>
+                                          </div>
                                       </div>
-                                      <div>
-                                          <h3 className="font-bold text-white">{content.title}</h3>
-                                          <p className="text-xs text-slate-400 uppercase">{content.type}</p>
-                                      </div>
+                                      <PixelButton variant="outline" className="text-xs">
+                                          <Download size={14} className="mr-2" />
+                                          DOWNLOAD
+                                      </PixelButton>
                                   </div>
-                                  <PixelButton variant="outline" className="text-xs">
-                                      <Download size={14} className="mr-2" />
-                                      DOWNLOAD
-                                  </PixelButton>
+                                  
+                                  {/* Embedded PDF Viewer if PDF */}
+                                  {(content.type === 'PDF' || content.type === 'PPT_PDF') && (
+                                      <PDFViewer url={content.storagePath} />
+                                  )}
                               </div>
                           ))
                       )}
@@ -118,9 +127,9 @@ export default async function ModuleDetailPage({ params }: { params: { courseId:
                                               SUBMIT TUGAS PENDAHULUAN
                                           </PixelButton>
                                       )}
-                                       {task.type === 'JURNAL' && (
+                                       {(task.type === 'JURNAL' || task.type === 'PRETEST' || task.type === 'POSTTEST') && (
                                           <div className="w-full p-3 bg-slate-900 text-center text-slate-500 text-sm border border-dashed border-slate-700">
-                                              Only available during Live Session
+                                              {activeSessionId ? 'Go to Live Session to complete' : 'Only available during Live Session'}
                                           </div>
                                       )}
                                   </div>
@@ -149,4 +158,3 @@ export default async function ModuleDetailPage({ params }: { params: { courseId:
     </DashboardLayout>
   );
 }
-

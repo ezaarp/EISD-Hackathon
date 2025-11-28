@@ -16,6 +16,19 @@ export default async function StudentLivePage(props: { params: Promise<{ liveSes
   const liveSession = await getLiveSession(params.liveSessionId);
   if (!liveSession) return <div>Session not found</div>;
 
+  // Strictly check if session is active
+  if (liveSession.status !== 'ACTIVE') {
+      return (
+          <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white font-pixel">
+              <div className="text-center">
+                  <h1 className="text-2xl text-rose-500 mb-2">SESSION NOT ACTIVE</h1>
+                  <p className="text-slate-400">This session has ended or hasn't started yet.</p>
+                  <a href="/dashboard/praktikan" className="mt-4 inline-block text-emerald-400 hover:underline">Back to Dashboard</a>
+              </div>
+          </div>
+      );
+  }
+
   const assignment = await prisma.studentAssignment.findFirst({
     where: {
       shiftId: liveSession.shiftId,
@@ -26,9 +39,6 @@ export default async function StudentLivePage(props: { params: Promise<{ liveSes
   if (!assignment) {
     return <div>Access Denied: You are not assigned to this shift.</div>;
   }
-
-  // Fetch submission if exists for Jurnal/Pretest/Posttest to restore state
-  // TODO: Fetch submission state
 
   return (
     <div className="min-h-screen bg-slate-900 text-white font-mono pb-20">
