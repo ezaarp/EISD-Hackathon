@@ -72,7 +72,20 @@ export default async function PraktikanDashboard() {
       take: 3
   });
 
-  // 6. Modules (Quest Board)
+  // 6. Active Live Session
+  const shiftIds = assignments.map(a => a.shiftId);
+  const activeLiveSession = await prisma.liveSession.findFirst({
+      where: {
+          shiftId: { in: shiftIds },
+          status: 'ACTIVE'
+      },
+      include: {
+          shift: { include: { course: true } },
+          moduleWeek: true
+      }
+  });
+
+  // 7. Modules (Quest Board)
   // Fetch modules for enrolled courses
   const courseIds = assignments.map(a => a.shift.courseId);
   const modules = await prisma.moduleWeek.findMany({
@@ -131,6 +144,32 @@ export default async function PraktikanDashboard() {
           </div>
         </PixelCard>
       </div>
+
+      {/* Active Live Session Banner */}
+      {activeLiveSession && (
+        <div className="mb-8 animate-pulse">
+          <PixelCard color="bg-gradient-to-r from-emerald-900 to-cyan-900 border-emerald-500">
+            <div className="flex items-center justify-between p-4">
+              <div className="flex items-center gap-4">
+                <div className="w-4 h-4 bg-emerald-400 rounded-full animate-pulse"></div>
+                <div>
+                  <h3 className="text-xl font-pixel text-white mb-1">LIVE SESSION ACTIVE</h3>
+                  <p className="text-emerald-300">
+                    {activeLiveSession.shift.course.code} - {activeLiveSession.moduleWeek.title}
+                  </p>
+                  <p className="text-xs text-emerald-400">Shift: {activeLiveSession.shift.name}</p>
+                </div>
+              </div>
+              <a 
+                href={`/live/${activeLiveSession.id}`}
+                className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold px-8 py-4 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none transition-all"
+              >
+                JOIN NOW →
+              </a>
+            </div>
+          </PixelCard>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Player Stats */}

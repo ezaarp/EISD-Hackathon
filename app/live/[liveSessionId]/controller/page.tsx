@@ -4,6 +4,8 @@ import { redirect } from 'next/navigation';
 import { getLiveSession } from '@/app/actions/live-session';
 import LiveControllerClient from './_components/LiveControllerClient';
 import DashboardLayout from '@/components/DashboardLayout';
+import { PixelButton } from '@/components/ui';
+import { ArrowLeft } from 'lucide-react';
 
 export default async function LiveControllerPage(props: { params: Promise<{ liveSessionId: string }> }) {
   const params = await props.params;
@@ -25,7 +27,10 @@ export default async function LiveControllerPage(props: { params: Promise<{ live
   return (
     <DashboardLayout user={session.user} navItems={navItems}>
       <div className="mb-8">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <PixelButton href="/dashboard/publikasi/live-session" variant="outline" className="w-12 flex justify-center">
+            <ArrowLeft size={20} />
+          </PixelButton>
           <div>
             <h1 className="text-3xl font-pixel text-white mb-2">LIVE CONTROLLER</h1>
             <p className="text-slate-400">

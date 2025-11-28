@@ -73,24 +73,34 @@ export default async function AssignmentDetailPage(props: { params: Promise<{ as
                   </div>
               )}
               
-              {!isLiveTask && task.type === 'TP' && (
+              {!isLiveTask && task.type.toUpperCase() === 'TP' && (
                   <PixelCard title="SUBMISSION">
                       {isSubmitted ? (
                           <div className="text-center py-8">
                               <CheckCircle size={48} className="mx-auto text-emerald-400 mb-4" />
                               <h3 className="text-xl font-bold text-white mb-2">SUBMITTED</h3>
                               <p className="text-slate-400">Submitted on {submission.submittedAt?.toLocaleDateString()}</p>
+                              <div className="mt-6">
+                                  <PixelButton 
+                                      href={`/dashboard/praktikan/assignments/${task.id}/submit`}
+                                      variant="outline"
+                                  >
+                                      VIEW SUBMISSION
+                                  </PixelButton>
+                              </div>
                           </div>
                       ) : (
                           <div className="text-center py-8">
-                              <FileText size={48} className="mx-auto text-slate-500 mb-4" />
-                              <p className="text-slate-400 mb-4">Upload your work here (PDF/ZIP)</p>
+                              <FileText size={48} className="mx-auto text-indigo-400 mb-4" />
+                              <p className="text-slate-400 mb-4">Kerjakan Tugas Pendahuluan Anda</p>
                               <div className="max-w-xs mx-auto">
-                                  {/* This would be a form to upload TP */}
-                                  <p className="text-xs text-amber-500 mb-2">TP Upload Coming Soon (Use Live Session for now)</p>
-                                  <PixelButton disabled variant="secondary" className="w-full">
+                                  <PixelButton 
+                                      href={`/dashboard/praktikan/assignments/${task.id}/submit`}
+                                      variant="primary" 
+                                      className="w-full"
+                                  >
                                       <Upload size={16} className="mr-2" />
-                                      UPLOAD FILE
+                                      KERJAKAN TUGAS
                                   </PixelButton>
                               </div>
                           </div>

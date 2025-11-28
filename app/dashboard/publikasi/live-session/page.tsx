@@ -49,9 +49,14 @@ export default async function LiveSessionDashboard() {
 
   return (
     <DashboardLayout user={session.user} navItems={navItems}>
-      <div className="mb-8">
-        <h1 className="text-3xl font-pixel text-white mb-2">LIVE SESSION CONTROL</h1>
-        <p className="text-slate-400">Start and manage practical sessions</p>
+      <div className="mb-8 flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-pixel text-white mb-2">LIVE SESSION CONTROL</h1>
+          <p className="text-slate-400">Start and manage practical sessions</p>
+        </div>
+        <PixelButton href="/dashboard/publikasi/live-session/create" variant="success">
+          + CUSTOM RUNDOWN
+        </PixelButton>
       </div>
 
       <div className="space-y-8">

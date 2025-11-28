@@ -95,7 +95,11 @@ export default async function ModuleDetailPage(props: { params: Promise<{ course
                                               <p className="text-xs text-slate-400 uppercase">{content.type}</p>
                                           </div>
                                       </div>
-                                      <PixelButton variant="outline" className="text-xs">
+                                      <PixelButton 
+                                          href={getFileUrl('materials', content.storagePath)} 
+                                          variant="outline" 
+                                          className="text-xs"
+                                      >
                                           <Download size={14} className="mr-2" />
                                           DOWNLOAD
                                       </PixelButton>
