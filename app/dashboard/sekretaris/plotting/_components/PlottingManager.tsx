@@ -1,22 +1,39 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createPlotting, autoAssignStudentsToShift } from '@/app/actions/secretary';
 import { PixelCard, PixelButton } from '@/components/ui';
-import { User, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 
 export default function PlottingManager({ shifts, assistants }: { shifts: any[], assistants: any[] }) {
-  const [selectedShift, setSelectedShift] = useState<string>(shifts[0]?.id || '');
+  // Extract unique courses from shifts
+  const courses = Array.from(new Set(shifts.map(s => s.course.id))).map(id => {
+      return shifts.find(s => s.course.id === id)?.course;
+  });
+
+  const [selectedCourseId, setSelectedCourseId] = useState<string>(courses[0]?.id || '');
+  const [selectedShiftId, setSelectedShiftId] = useState<string>('');
   const [loading, setLoading] = useState(false);
-  
-  // State for managing plots
-  const activeShift = shifts.find(s => s.id === selectedShift);
+
+  // Filter shifts by course
+  const filteredShifts = shifts.filter(s => s.courseId === selectedCourseId);
+
+  // Set default shift when course changes
+  useEffect(() => {
+      if (filteredShifts.length > 0) {
+          setSelectedShiftId(filteredShifts[0].id);
+      } else {
+          setSelectedShiftId('');
+      }
+  }, [selectedCourseId]);
+
+  const activeShift = shifts.find(s => s.id === selectedShiftId);
 
   const handleAssignAssistant = async (assistantId: string, plotNo: number) => {
-      if (!selectedShift) return;
+      if (!selectedShiftId) return;
       setLoading(true);
       try {
-          await createPlotting(selectedShift, assistantId, plotNo);
+          await createPlotting(selectedShiftId, assistantId, plotNo);
       } catch (e) {
           alert('Failed to assign');
       } finally {
@@ -31,7 +48,7 @@ export default function PlottingManager({ shifts, assistants }: { shifts: any[],
       setLoading(true);
       try {
           const nimList = nims.split(',').map(s => s.trim());
-          const res = await autoAssignStudentsToShift(selectedShift, nimList);
+          const res = await autoAssignStudentsToShift(selectedShiftId, nimList);
           if (res.success) alert(`Assigned ${res.assignedCount} students`);
           else alert(res.error);
       } catch (e) {
@@ -43,24 +60,48 @@ export default function PlottingManager({ shifts, assistants }: { shifts: any[],
 
   return (
     <div className="space-y-6">
-        <PixelCard title="SELECT SHIFT">
+        {/* 1. Select Course */}
+        <PixelCard title="1. SELECT COURSE">
             <div className="flex gap-4 overflow-x-auto pb-2">
-                {shifts.map(shift => (
+                {courses.map(course => (
                     <button
-                        key={shift.id}
-                        onClick={() => setSelectedShift(shift.id)}
+                        key={course?.id}
+                        onClick={() => setSelectedCourseId(course?.id || '')}
                         className={`px-4 py-2 font-pixel text-xs whitespace-nowrap transition-all ${
-                            selectedShift === shift.id
-                            ? 'bg-emerald-500 text-black translate-y-1'
+                            selectedCourseId === course?.id
+                            ? 'bg-indigo-500 text-white translate-y-1'
                             : 'bg-slate-700 text-white hover:bg-slate-600'
                         }`}
                     >
-                        {shift.name} ({shift.day})
+                        {course?.code}
                     </button>
                 ))}
             </div>
         </PixelCard>
 
+        {/* 2. Select Shift */}
+        {selectedCourseId && (
+            <PixelCard title="2. SELECT SHIFT">
+                <div className="flex gap-4 overflow-x-auto pb-2">
+                    {filteredShifts.map(shift => (
+                        <button
+                            key={shift.id}
+                            onClick={() => setSelectedShiftId(shift.id)}
+                            className={`px-4 py-2 font-pixel text-xs whitespace-nowrap transition-all ${
+                                selectedShiftId === shift.id
+                                ? 'bg-emerald-500 text-black translate-y-1'
+                                : 'bg-slate-700 text-white hover:bg-slate-600'
+                            }`}
+                        >
+                            {shift.name} ({shift.day})
+                        </button>
+                    ))}
+                    {filteredShifts.length === 0 && <p className="text-slate-500 text-xs">No shifts found for this course.</p>}
+                </div>
+            </PixelCard>
+        )}
+
+        {/* 3. Plotting Interface */}
         {activeShift && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
@@ -93,6 +134,12 @@ export default function PlottingManager({ shifts, assistants }: { shifts: any[],
                                                 Assigned: {currentPlot.assistant.name}
                                             </p>
                                         )}
+                                        
+                                        <div className="mt-2 pt-2 border-t border-slate-700">
+                                            <p className="text-xs text-slate-400">
+                                                Max Capacity: 7 Students
+                                            </p>
+                                        </div>
                                     </div>
                                 );
                             })}
@@ -107,7 +154,7 @@ export default function PlottingManager({ shifts, assistants }: { shifts: any[],
                                 AUTO-ASSIGN STUDENTS
                             </PixelButton>
                             <p className="text-xs text-slate-400">
-                                Distributes students evenly among defined plots for this shift.
+                                Distributes students evenly among defined plots for this shift (Max 7 per plot).
                             </p>
                         </div>
                     </PixelCard>
@@ -117,4 +164,3 @@ export default function PlottingManager({ shifts, assistants }: { shifts: any[],
     </div>
   );
 }
-

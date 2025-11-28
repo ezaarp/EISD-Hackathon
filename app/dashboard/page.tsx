@@ -18,7 +18,7 @@ export default async function DashboardPage() {
     KOORDINATOR: '/dashboard/koordinator',
     SEKRETARIS: '/dashboard/sekretaris',
     KOMDIS: '/dashboard/komdis',
-    PUBLIKASI: '/dashboard/publikasi',
+    PUBLIKASI: '/dashboard/publikasi/live-session',
     MEDIA: '/dashboard/media',
     LABORAN: '/dashboard/laboran',
     DOSEN: '/dashboard/dosen',

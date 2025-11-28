@@ -13,9 +13,6 @@ export async function bulkCreateStudents(userListText: string) {
     return { success: false, error: 'Unauthorized' };
   }
 
-  // Format expectation: NIM,Name,Email (optional)
-  // OR just NIM (Name defaults to "Praktikan NIM", Email defaults to NIM@student...)
-  
   const lines = userListText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
   let createdCount = 0;
   let errors = [];
@@ -30,7 +27,6 @@ export async function bulkCreateStudents(userListText: string) {
       const email = parts[2] || `${nim}@student.telkomuniversity.ac.id`;
       const passwordHash = await bcrypt.hash(nim, 10); // Default pass = NIM
 
-      // Check existing
       const existing = await prisma.user.findUnique({ where: { username: nim } });
       if (existing) {
         errors.push(`NIM ${nim} already exists`);
@@ -58,12 +54,29 @@ export async function bulkCreateStudents(userListText: string) {
   return { success: true, createdCount, errors };
 }
 
+export async function deleteUser(userId: string) {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== 'SEKRETARIS') throw new Error('Unauthorized');
+
+    await prisma.user.delete({ where: { id: userId } });
+    revalidatePath('/dashboard/sekretaris/users');
+    return { success: true };
+}
+
 export async function getShiftsAndAssistants() {
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== 'SEKRETARIS') throw new Error('Unauthorized');
 
     const shifts = await prisma.shift.findMany({
-        include: { course: true, plottings: { include: { assistant: true } } },
+        include: { 
+            course: true, 
+            plottings: { 
+                include: { 
+                    assistant: true,
+                    studentAssignments: true // Include assignments to count students
+                } 
+            } 
+        },
         orderBy: { courseId: 'asc' }
     });
 
@@ -79,10 +92,6 @@ export async function createPlotting(shiftId: string, assistantId: string, plotN
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== 'SEKRETARIS') throw new Error('Unauthorized');
 
-    // Check collision? An assistant can handle multiple plots in DIFFERENT shifts, but usually not same shift.
-    // But schema allows.
-    
-    // Upsert plotting
     await prisma.plotting.upsert({
         where: {
             shiftId_plotNo: { shiftId, plotNo }
@@ -106,31 +115,42 @@ export async function autoAssignStudentsToShift(shiftId: string, studentNims: st
     // 1. Get plots for this shift
     const plots = await prisma.plotting.findMany({
         where: { shiftId },
+        include: { studentAssignments: true },
         orderBy: { plotNo: 'asc' }
     });
 
     if (plots.length === 0) return { success: false, error: 'No plotting assistants found for this shift' };
 
-    let plotIndex = 0;
     let assignedCount = 0;
+    const MAX_STUDENTS_PER_PLOT = 7;
 
     for (const nim of studentNims) {
         const student = await prisma.user.findUnique({ where: { username: nim } });
         if (!student) continue;
 
-        // Round robin assignment
-        const plot = plots[plotIndex % plots.length];
+        // Find plot with least students < 7
+        const availablePlots = plots.filter(p => p.studentAssignments.length < MAX_STUDENTS_PER_PLOT);
         
+        if (availablePlots.length === 0) {
+            // All full
+            continue;
+        }
+
+        // Sort by current count ascending
+        availablePlots.sort((a, b) => a.studentAssignments.length - b.studentAssignments.length);
+        const targetPlot = availablePlots[0];
+
         try {
             await prisma.studentAssignment.create({
                 data: {
                     shiftId,
                     studentId: student.id,
-                    plottingId: plot.id
+                    plottingId: targetPlot.id
                 }
             });
+            // Update local count for next iteration
+            targetPlot.studentAssignments.push({} as any);
             assignedCount++;
-            plotIndex++;
         } catch (e) {
             // Already assigned likely
         }
@@ -138,4 +158,3 @@ export async function autoAssignStudentsToShift(shiftId: string, studentNims: st
 
     return { success: true, assignedCount };
 }
-

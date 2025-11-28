@@ -28,7 +28,7 @@ export default async function GradesPage() {
     include: {
       task: {
         include: {
-          module: {
+          moduleWeek: {
             include: {
               course: true,
             },
@@ -44,10 +44,10 @@ export default async function GradesPage() {
 
   // Group by course
   const submissionsByCourse = submissions.reduce((acc, submission) => {
-    const courseId = submission.task.module.course.id;
+    const courseId = submission.task.moduleWeek.course.id;
     if (!acc[courseId]) {
       acc[courseId] = {
-        course: submission.task.module.course,
+        course: submission.task.moduleWeek.course,
         submissions: [],
       };
     }
@@ -78,10 +78,10 @@ export default async function GradesPage() {
           {courseGrades.map(({ course, submissions: courseSubmissions }) => {
             // Group by module
             const moduleScores = courseSubmissions.reduce((acc, sub) => {
-              const moduleId = sub.task.module.id;
+              const moduleId = sub.task.moduleWeek.id;
               if (!acc[moduleId]) {
                 acc[moduleId] = {
-                  weekNo: sub.task.module.weekNo,
+                  weekNo: sub.task.moduleWeek.weekNo,
                   submissions: [],
                 };
               }
@@ -153,7 +153,7 @@ export default async function GradesPage() {
                             className="border-b border-slate-800 hover:bg-slate-800/50"
                           >
                             <td className="py-3 px-2 text-white font-bold">
-                              Week {submission.task.module.weekNo}
+                              Week {submission.task.moduleWeek.weekNo}
                             </td>
                             <td className="py-3 px-2 text-white">
                               {submission.task.title}

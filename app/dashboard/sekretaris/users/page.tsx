@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
 import DashboardLayout from '@/components/DashboardLayout';
 import BulkCreateForm from './_components/BulkCreateForm';
+import UserList from './_components/UserList';
 import { prisma } from '@/lib/prisma';
 import { PixelCard } from '@/components/ui';
 
@@ -19,7 +20,7 @@ export default async function UsersPage() {
   const recentStudents = await prisma.user.findMany({
       where: { role: 'PRAKTIKAN' },
       orderBy: { createdAt: 'desc' },
-      take: 10
+      take: 50 // Increased limit to show scrolling
   });
 
   return (
@@ -31,25 +32,10 @@ export default async function UsersPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <BulkCreateForm />
           
-          <PixelCard title="RECENTLY ADDED">
-              <div className="space-y-2">
-                  {recentStudents.length === 0 ? (
-                      <p className="text-slate-500 italic">No students yet.</p>
-                  ) : (
-                      recentStudents.map(student => (
-                          <div key={student.id} className="p-2 border-b border-slate-700 flex justify-between items-center">
-                              <div>
-                                  <p className="font-bold text-white text-sm">{student.name}</p>
-                                  <p className="text-xs text-slate-400">{student.username}</p>
-                              </div>
-                              <span className="text-xs text-emerald-500">Active</span>
-                          </div>
-                      ))
-                  )}
-              </div>
+          <PixelCard title="STUDENT LIST">
+              <UserList users={recentStudents} />
           </PixelCard>
       </div>
     </DashboardLayout>
   );
 }
-

@@ -63,7 +63,15 @@ export async function createLiveSession(shiftId: string, moduleWeekId: string) {
   });
 
   if (existing) {
-    return { success: true, sessionId: existing.id };
+    // If existing is Completed, allow creating a new one or restart logic?
+    // User complained: "end sesi, habis itu logout dan login lagi. tiba tiba, tidak bisa melakukan start sesi lagi maupun end"
+    // If status is COMPLETED, we should probably allow creating a NEW session for re-run or just fail.
+    // But if status is ACTIVE/PAUSED/DRAFT, we return existing.
+    if (existing.status === 'COMPLETED' || existing.status === 'CANCELLED') {
+       // Allow creating new session if previous is done
+    } else {
+       return { success: true, sessionId: existing.id };
+    }
   }
 
   const newSession = await prisma.liveSession.create({
