@@ -42,6 +42,17 @@ export async function getLiveSession(sessionId: string) {
       stages: {
         orderBy: { stageOrder: 'asc' },
       },
+      attendances: {
+        include: {
+          student: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+            }
+          }
+        }
+      },
       // currentStage relation does not exist, we use stages array
     },
   });

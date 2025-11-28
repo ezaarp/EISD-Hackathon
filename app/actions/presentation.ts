@@ -28,23 +28,39 @@ export async function uploadPresentation(liveSessionId: string, formData: FormDa
     }
 
     const fieldName = type === 'TP' ? 'tpPresentation' : 'jurnalPresentation';
-    const file = formData.get(fieldName) as File;
-    
-    if (!file || file.type !== 'application/pdf') {
+    const file = formData.get(fieldName);
+
+    // Validate file exists and is a File object
+    if (!file || !(file instanceof File)) {
+        throw new Error('No file uploaded');
+    }
+
+    // Validate file is not empty
+    if (file.size === 0) {
+        throw new Error('File is empty');
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+        throw new Error('File size must be less than 10MB');
+    }
+
+    // Validate file type
+    if (file.type !== 'application/pdf') {
         throw new Error('Please upload a PDF file');
     }
 
     // Upload to Supabase Storage
     const buffer = Buffer.from(await file.arrayBuffer());
     const path = `presentations/${liveSessionId}/${type.toLowerCase()}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-    
+
     const { path: storagePath } = await uploadFile('materials', path, buffer, {
         contentType: 'application/pdf',
         upsert: true
     });
 
     // Update live session
-    const updateData = type === 'TP' 
+    const updateData = type === 'TP'
         ? { tpReviewPresentationPath: storagePath, tpReviewCurrentSlide: 1 }
         : { jurnalReviewPresentationPath: storagePath, jurnalReviewCurrentSlide: 1 };
 

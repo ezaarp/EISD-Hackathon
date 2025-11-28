@@ -12,7 +12,9 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "setup:storage": "tsx scripts/setup-storage.ts",
+    "setup:realtime": "tsx scripts/setup-realtime.ts"
   },
   "keywords": [],
   "author": "",

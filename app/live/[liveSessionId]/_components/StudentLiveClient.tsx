@@ -30,8 +30,12 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
 
   // Quiz Result State
   const [showQuizResult, setShowQuizResult] = useState(false);
-  const [quizResult, setQuizResult] = useState<{score: number, total: number, timeRemaining: string} | null>(null);
+  const [quizResult, setQuizResult] = useState<{score: number, total: number} | null>(null);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+
+  // Submission Success Modal State
+  const [showSubmissionSuccess, setShowSubmissionSuccess] = useState(false);
+  const [submissionType, setSubmissionType] = useState<'PRETEST' | 'JURNAL' | 'POSTTEST' | null>(null);
 
   // Feedback State
   const [feedbackRating, setFeedbackRating] = useState(0);
@@ -58,6 +62,8 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
         setShowQuizResult(false);
         setQuizResult(null);
         setHasSubmitted(false);
+        setShowSubmissionSuccess(false);
+        setSubmissionType(null);
       })
       .on('broadcast', { event: 'session_end' }, (payload) => {
         setStatus('COMPLETED');
@@ -111,28 +117,26 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
       setIsSubmitting(true);
       try {
           const result = await submitMCQ(taskId, mcqAnswers, liveSessionId);
-          
-          // Calculate time remaining
-          const now = new Date();
-          const endTime = stageData?.startedAt 
-            ? new Date(new Date(stageData.startedAt).getTime() + stageData.durationSec * 1000) 
-            : now;
-          const timeLeft = Math.max(0, Math.floor((endTime.getTime() - now.getTime()) / 1000));
-          const minutes = Math.floor(timeLeft / 60);
-          const seconds = timeLeft % 60;
-          
+
           // Lock submission
           setHasSubmitted(true);
-          
-          // Show result modal
+
+          // Show result modal first
           setQuizResult({
             score: result.score || 0,
             total: result.total || 0,
-            timeRemaining: `${minutes}:${seconds.toString().padStart(2, '0')}`
           });
           setShowQuizResult(true);
+
+          // After 3 seconds, close quiz result and show submission success
+          setTimeout(() => {
+            setShowQuizResult(false);
+            setSubmissionType(taskType as 'PRETEST' | 'POSTTEST');
+            setShowSubmissionSuccess(true);
+          }, 3000);
       } catch (e: any) {
           alert('Failed to submit: ' + e.message);
+          setHasSubmitted(false);
       } finally {
           setIsSubmitting(false);
       }
@@ -143,9 +147,16 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
        setIsSubmitting(true);
        try {
            await submitCode(taskId, questionId, codeAnswer, liveSessionId);
-           alert('Code submitted successfully!');
-       } catch (e) {
-           alert('Failed to submit');
+
+           // Lock submission
+           setHasSubmitted(true);
+
+           // Show submission success modal
+           setSubmissionType('JURNAL');
+           setShowSubmissionSuccess(true);
+       } catch (e: any) {
+           alert('Failed to submit: ' + e.message);
+           setHasSubmitted(false);
        } finally {
            setIsSubmitting(false);
        }
@@ -267,26 +278,44 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
             </div>
         )}
 
-        {/* Quiz Result Modal - LOCKED, cannot close */}
+        {/* Quiz Result Modal - Shows score briefly */}
         {showQuizResult && quizResult && (
             <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
                 <div className="bg-slate-900 border-4 border-emerald-500 w-full max-w-lg p-8 relative text-center">
                     <CheckCircle size={64} className="mx-auto text-emerald-400 mb-4" />
                     <h2 className="text-3xl font-pixel text-emerald-400 mb-4">SELAMAT!</h2>
                     <p className="text-xl text-white mb-6">Telah berhasil menyelesaikan quiz</p>
-                    
+
                     <div className="bg-slate-800 border-2 border-slate-700 p-6 mb-6">
                         <div className="text-4xl font-pixel text-white mb-2">
                             {quizResult.score} / {quizResult.total}
                         </div>
                         <p className="text-slate-400">Your Score</p>
                     </div>
-                    
-                    <div className="text-sm text-slate-400 mb-6">
-                        <Clock size={16} className="inline mr-2" />
-                        Time Remaining: <span className="text-emerald-400 font-bold">{quizResult.timeRemaining}</span>
+
+                    <p className="text-xs text-slate-500 animate-pulse">Loading...</p>
+                </div>
+            </div>
+        )}
+
+        {/* Submission Success Modal - Shows timer and waiting message */}
+        {showSubmissionSuccess && submissionType && endTime && (
+            <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
+                <div className="bg-slate-900 border-4 border-emerald-500 w-full max-w-lg p-8 relative text-center">
+                    <CheckCircle size={64} className="mx-auto text-emerald-400 mb-4" />
+                    <h2 className="text-3xl font-pixel text-emerald-400 mb-4">SELAMAT!</h2>
+                    <p className="text-xl text-white mb-6">
+                        Anda telah menyelesaikan {submissionType === 'PRETEST' ? 'Pre-Test' : submissionType === 'POSTTEST' ? 'Post-Test' : 'Jurnal'}
+                    </p>
+
+                    <div className="bg-slate-800 border-2 border-slate-700 p-6 mb-6">
+                        <div className="text-sm text-slate-400 mb-2">Sisa Waktu Sesi:</div>
+                        <div className="text-5xl font-pixel text-emerald-400">
+                            <Countdown target={endTime} />
+                        </div>
                     </div>
-                    
+
+                    <p className="text-lg text-white mb-2">Silahkan tunggu waktu sesi hingga selesai</p>
                     <p className="text-xs text-slate-500">Mohon tunggu asisten untuk melanjutkan ke stage berikutnya</p>
                 </div>
             </div>
@@ -383,7 +412,7 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
              </div>
         )}
 
-        {currentStage === 'JURNAL' && jurnalTask && (
+        {currentStage === 'JURNAL' && jurnalTask && !hasSubmitted && (
              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
                     {jurnalTask.questions.map((q: any, idx: number) => (

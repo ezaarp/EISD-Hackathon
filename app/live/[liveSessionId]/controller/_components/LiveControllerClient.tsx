@@ -42,7 +42,13 @@ export default function LiveControllerClient({ session, liveSessionId }: { sessi
   const [stageIndex, setStageIndex] = useState(session.currentStageIndex);
   const [status, setStatus] = useState(session.status);
   const [isLoading, setIsLoading] = useState(false);
-  const [attendanceCount, setAttendanceCount] = useState(0);
+
+  // Initialize attendance count from session data
+  const initialAttendanceCount = session.attendances?.filter(
+    (a: any) => a.status === 'PRESENT' || a.status === 'LATE'
+  ).length || 0;
+  const [attendanceCount, setAttendanceCount] = useState(initialAttendanceCount);
+
   const router = useRouter();
 
   useEffect(() => {
@@ -63,13 +69,35 @@ export default function LiveControllerClient({ session, liveSessionId }: { sessi
       .on('broadcast', { event: 'session_end' }, (payload) => {
         setStatus('COMPLETED');
       })
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
         table: 'Attendance',
-        filter: `liveSessionId=eq.${liveSessionId}` 
-      }, (payload) => {
-        setAttendanceCount(prev => prev + 1);
+        filter: `liveSessionId=eq.${liveSessionId}`
+      }, (payload: any) => {
+        // Only increment if status is PRESENT or LATE
+        if (payload.new.status === 'PRESENT' || payload.new.status === 'LATE') {
+          setAttendanceCount(prev => prev + 1);
+        }
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'Attendance',
+        filter: `liveSessionId=eq.${liveSessionId}`
+      }, (payload: any) => {
+        // Recalculate based on status change
+        const oldStatus = payload.old.status;
+        const newStatus = payload.new.status;
+
+        const wasPresent = oldStatus === 'PRESENT' || oldStatus === 'LATE';
+        const isPresent = newStatus === 'PRESENT' || newStatus === 'LATE';
+
+        if (!wasPresent && isPresent) {
+          setAttendanceCount(prev => prev + 1);
+        } else if (wasPresent && !isPresent) {
+          setAttendanceCount(prev => Math.max(0, prev - 1));
+        }
       })
       .subscribe();
 
