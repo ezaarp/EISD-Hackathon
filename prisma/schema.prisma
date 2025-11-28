@@ -334,11 +334,12 @@ model Task {
   moduleWeekId  String
   moduleWeek    ModuleWeek @relation(fields: [moduleWeekId], references: [id], onDelete: Cascade)
 
-  type          TaskType
+  type          String
   title         String
   instructions  String     @db.Text
 
   templatePath  String?    // Path ke template ZIP untuk code-based
+  instructionPath String?  // Path ke PDF soal/instruksi
   allowCopyPaste Boolean   @default(false)
 
   // Untuk code-based: constraints

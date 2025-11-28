@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { PixelCard, PixelButton, Timer } from '@/components/ui'; 
 import { StageType } from '@prisma/client';
-import { Clock, AlertCircle, CheckCircle, FileText, Save, Users } from 'lucide-react';
-import { submitMCQ, submitCode } from '@/app/actions/submission';
+import { Clock, AlertCircle, CheckCircle, FileText, Save, Users, Upload, X } from 'lucide-react';
+import { submitMCQ, submitCode, uploadEvidence } from '@/app/actions/submission';
 
 export default function StudentLiveClient({ session, liveSessionId, userId }: { session: any, liveSessionId: string, userId: string }) {
   const [currentStage, setCurrentStage] = useState<StageType | null>(
@@ -21,6 +21,10 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
   const [codeAnswer, setCodeAnswer] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastAutosave, setLastAutosave] = useState<Date | null>(null);
+  
+  // Evidence Upload State
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     const channel = supabase.channel(`live-${liveSessionId}`)
@@ -100,6 +104,19 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
        } finally {
            setIsSubmitting(false);
        }
+  };
+
+  const handleUploadEvidence = async (formData: FormData) => {
+      setIsUploading(true);
+      try {
+          await uploadEvidence(formData);
+          alert('Evidence uploaded successfully!');
+          setShowUploadModal(false);
+      } catch (e: any) {
+          alert('Failed to upload evidence: ' + e.message);
+      } finally {
+          setIsUploading(false);
+      }
   };
 
   if (status === 'COMPLETED') {
@@ -236,12 +253,58 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
                         <div className="prose prose-invert text-sm" dangerouslySetInnerHTML={{__html: jurnalTask.instructions}} />
                         <div className="mt-4 p-4 bg-slate-800 border border-slate-600">
                             <p className="text-xs text-slate-400 mb-2">Don't forget to upload evidence PDF.</p>
-                            <PixelButton variant="outline" className="w-full text-xs">
+                            <PixelButton 
+                                variant="outline" 
+                                className="w-full text-xs"
+                                onClick={() => setShowUploadModal(true)}
+                            >
+                                <Upload size={14} className="mr-2" />
                                 UPLOAD EVIDENCE
                             </PixelButton>
                         </div>
                     </PixelCard>
                 </div>
+
+                {/* Upload Modal */}
+                {showUploadModal && (
+                    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+                        <div className="bg-slate-900 border-2 border-slate-600 w-full max-w-md p-6 relative">
+                            <button 
+                                onClick={() => setShowUploadModal(false)}
+                                className="absolute top-2 right-2 text-slate-400 hover:text-white"
+                            >
+                                <X size={20} />
+                            </button>
+                            <h3 className="text-xl font-pixel text-white mb-4">UPLOAD EVIDENCE</h3>
+                            <form action={handleUploadEvidence} className="space-y-4">
+                                <input type="hidden" name="taskId" value={jurnalTask.id} />
+                                <input type="hidden" name="liveSessionId" value={liveSessionId} />
+                                
+                                <div>
+                                    <label className="block text-xs text-slate-400 mb-2 uppercase">Select PDF File</label>
+                                    <input 
+                                        type="file" 
+                                        name="file" 
+                                        accept=".pdf"
+                                        className="w-full bg-black border border-slate-700 p-2 text-sm" 
+                                        required 
+                                    />
+                                </div>
+                                
+                                <div className="pt-4">
+                                    <PixelButton 
+                                        type="submit" 
+                                        variant="primary" 
+                                        className="w-full"
+                                        disabled={isUploading}
+                                    >
+                                        {isUploading ? 'UPLOADING...' : 'UPLOAD PDF'}
+                                    </PixelButton>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
              </div>
         )}
 

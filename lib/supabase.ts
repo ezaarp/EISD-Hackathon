@@ -26,7 +26,8 @@ export async function uploadFile(
     upsert?: boolean;
   }
 ) {
-  const { data, error } = await supabase.storage.from(bucket).upload(path, file, {
+  const client = supabaseAdmin || supabase;
+  const { data, error } = await client.storage.from(bucket).upload(path, file, {
     contentType: options?.contentType,
     cacheControl: options?.cacheControl || '3600',
     upsert: options?.upsert || false,
@@ -37,7 +38,7 @@ export async function uploadFile(
   }
 
   // Get public URL
-  const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(path);
+  const { data: urlData } = client.storage.from(bucket).getPublicUrl(path);
 
   return {
     path: data.path,
@@ -47,7 +48,8 @@ export async function uploadFile(
 
 // Helper untuk delete file
 export async function deleteFile(bucket: string, path: string) {
-  const { error } = await supabase.storage.from(bucket).remove([path]);
+  const client = supabaseAdmin || supabase;
+  const { error } = await client.storage.from(bucket).remove([path]);
 
   if (error) {
     throw error;

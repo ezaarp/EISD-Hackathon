@@ -6,7 +6,8 @@ import { PixelCard, PixelButton } from '@/components/ui';
 import { redirect } from 'next/navigation';
 import { Lock, CheckCircle, Clock, ArrowRight } from 'lucide-react';
 
-export default async function CourseModulesPage({ params }: { params: { courseId: string } }) {
+export default async function CourseModulesPage(props: { params: Promise<{ courseId: string }> }) {
+  const params = await props.params;
   const session = await getServerSession(authOptions);
   if (!session) return redirect('/login');
 

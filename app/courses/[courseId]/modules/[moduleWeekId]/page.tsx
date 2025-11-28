@@ -6,6 +6,7 @@ import { PixelCard, PixelButton } from '@/components/ui';
 import { redirect } from 'next/navigation';
 import { FileText, Download, Upload, Radio, CheckCircle } from 'lucide-react';
 import { getActiveSessionForStudent } from '@/app/actions/live-session';
+import { getFileUrl } from '@/lib/supabase';
 import PDFViewer from '@/components/ui/PDFViewer';
 
 export default async function ModuleDetailPage(props: { params: Promise<{ courseId: string, moduleWeekId: string }> }) {
@@ -102,7 +103,7 @@ export default async function ModuleDetailPage(props: { params: Promise<{ course
                                   
                                   {/* Embedded PDF Viewer if PDF */}
                                   {(content.type === 'PDF' || content.type === 'PPT_PDF') && (
-                                      <PDFViewer url={content.storagePath} />
+                                      <PDFViewer url={getFileUrl('materials', content.storagePath)} />
                                   )}
                               </div>
                           ))

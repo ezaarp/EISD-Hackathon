@@ -1,28 +1,21 @@
 'use client';
 
 export default function PDFViewer({ url }: { url: string }) {
-  // Simple iframe viewer for hackathon speed. 
-  // In production, use react-pdf or PDF.js for better control.
+  // Use Google Docs Viewer for wider compatibility if needed, 
+  // but for PDF files, direct browser viewing usually works via iframe 
+  // if the server sends correct Content-Type (which Supabase does).
   
-  // If URL is not absolute or from storage, we might need to sign it. 
-  // For now assuming public URL from Supabase or static placeholder.
-  
-  const displayUrl = url.startsWith('http') ? url : `/api/file-proxy?path=${url}`; 
-  // OR just direct if we are confident. 
-  // Let's assume for the demo we use a placeholder if path is not a URL
-  
-  const finalUrl = url.includes('placeholder') 
-    ? 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf' // reliable dummy pdf
-    : url;
-
   return (
-    <div className="w-full h-[500px] bg-slate-900 border-2 border-slate-700">
+    <div className="w-full h-[600px] bg-slate-900 border-2 border-slate-700 overflow-hidden relative">
+         {/* Fallback message */}
+         <div className="absolute inset-0 flex items-center justify-center -z-10 text-slate-500">
+             Loading PDF...
+         </div>
         <iframe 
-            src={`${finalUrl}#toolbar=0`} 
+            src={url} 
             className="w-full h-full"
             title="PDF Viewer"
         />
     </div>
   );
 }
-

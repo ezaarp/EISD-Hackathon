@@ -5,6 +5,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { gradeMCQ, gradeCode } from '@/lib/grading';
 import { revalidatePath } from 'next/cache';
+import { uploadFile } from '@/lib/supabase';
 
 export async function submitMCQ(taskId: string, answers: Record<string, string>, liveSessionId?: string) {
   const session = await getServerSession(authOptions);
@@ -147,3 +148,62 @@ export async function submitCode(taskId: string, questionId: string, code: strin
     return { success: true };
 }
 
+export async function uploadEvidence(formData: FormData) {
+    const session = await getServerSession(authOptions);
+    if (!session) throw new Error('Unauthorized');
+
+    const file = formData.get('file') as File;
+    const taskId = formData.get('taskId') as string;
+    const liveSessionId = formData.get('liveSessionId') as string;
+
+    if (!file || !taskId) throw new Error('Missing required fields');
+
+    // Convert to Buffer
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const path = `${session.user.id}/${taskId}/${Date.now()}-${file.name}`;
+
+    // Upload to 'evidence' bucket (private)
+    const { path: storagePath } = await uploadFile('evidence', path, buffer, {
+        contentType: file.type,
+        upsert: true
+    });
+
+    // Find submission to update (or create if not exists)
+    // Usually code submission exists as draft
+    // We attach evidence to the first question submission of the task or creates a new one?
+    // Schema has evidencePdfPath on Submission. A Task might have multiple questions (Jurnal usually has multiple numbers).
+    // Usually evidence is ONE PDF for the whole Jurnal.
+    // But our Submission model is per-question (questionId is optional?).
+    // Let's see schema: questionId String?
+    // So we can create a submission for the Task without a questionId specifically for the Evidence?
+    // Or attach to the first question?
+    // Best practice: Create a submission entry specifically for the evidence if it applies to the whole task.
+
+    // Check if there is a "general" submission for this task (no questionId)
+    let submission = await prisma.submission.findFirst({
+        where: {
+            taskId,
+            questionId: null,
+            studentId: session.user.id
+        }
+    });
+
+    if (submission) {
+        await prisma.submission.update({
+            where: { id: submission.id },
+            data: { evidencePdfPath: storagePath, liveSessionId }
+        });
+    } else {
+        await prisma.submission.create({
+            data: {
+                taskId,
+                studentId: session.user.id,
+                liveSessionId,
+                evidencePdfPath: storagePath,
+                status: 'SUBMITTED' // Evidence submitted
+            }
+        });
+    }
+
+    return { success: true };
+}
