@@ -6,8 +6,8 @@ import { updateGrade, approveGrade, rejectGrade } from '@/app/actions/grading';
 import { CheckCircle, XCircle } from 'lucide-react';
 
 export default function GradingForm({ submission }: { submission: any }) {
-  const [score, setScore] = useState(submission.grade?.score || 0);
-  const [notes, setNotes] = useState(submission.grade?.notes || '');
+  const [score, setScore] = useState(submission.grade?.score ?? 0);
+  const [notes, setNotes] = useState(submission.grade?.notes ?? '');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSave = async () => {
@@ -64,25 +64,8 @@ export default function GradingForm({ submission }: { submission: any }) {
   return (
     <PixelCard title="GRADING">
       <div className="space-y-4">
-        {/* AI Recommended Score (if exists) */}
-        {submission.grade && submission.grade.gradedByAI && (
-          <div className="bg-indigo-900/50 border border-indigo-500 p-4 text-center">
-            <p className="text-xs text-indigo-300 mb-2">AI Recommended</p>
-            <p className="text-3xl font-pixel text-indigo-400">{submission.grade.score}</p>
-          </div>
-        )}
-
-        {submission.grade?.breakdownJson && (
-          <div className="bg-slate-900 border border-slate-700 p-3 max-h-40 overflow-y-auto">
-            <p className="text-xs text-slate-400 mb-2">Breakdown</p>
-            <pre className="text-xs text-slate-300">
-              {JSON.stringify(JSON.parse(submission.grade.breakdownJson), null, 2)}
-            </pre>
-          </div>
-        )}
-
         {/* Manual Input Section */}
-        <div className="pt-4 border-t border-slate-700">
+        <div>
           <label className="block text-xs text-slate-400 mb-2 uppercase font-bold">
             {isApproved || isRejected ? 'Final Score' : 'Enter Score'}
           </label>

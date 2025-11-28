@@ -22,7 +22,7 @@ export async function updateGrade(submissionId: string, score: number, notes: st
             data: {
                 score,
                 notes,
-                status: 'RECOMMENDED'
+                status: 'PENDING'
             }
         });
     } else {
@@ -31,8 +31,7 @@ export async function updateGrade(submissionId: string, score: number, notes: st
                 submissionId,
                 score,
                 notes,
-                status: 'RECOMMENDED',
-                gradedByAI: false
+                status: 'PENDING'
             }
         });
     }

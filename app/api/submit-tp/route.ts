@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { uploadFile } from '@/lib/supabase';
-import { gradeMCQ, gradeCode } from '@/lib/grading';
 
 export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
@@ -47,20 +46,15 @@ export async function POST(req: NextRequest) {
             evidencePath = storagePath;
         }
 
-        let totalScore = 0;
-        let maxScore = 0;
-
         // Process each question
         for (const question of task.questions) {
             const answer = formData.get(`question_${question.id}`);
             if (!answer) continue;
 
-            maxScore += question.points;
-
             const answerText = answer.toString();
 
             // Create submission
-            const submission = await prisma.submission.create({
+            await prisma.submission.create({
                 data: {
                     taskId,
                     questionId: question.id,
@@ -72,29 +66,6 @@ export async function POST(req: NextRequest) {
                     submittedAt: new Date()
                 }
             });
-
-            // Grade it
-            if (question.answerKey) {
-                let result;
-                if (question.type === 'MCQ') {
-                    result = gradeMCQ(answerText, question.answerKey);
-                } else {
-                    result = gradeCode(answerText, question.answerKey);
-                }
-
-                const pointsEarned = (result.score / 100) * question.points;
-                totalScore += pointsEarned;
-
-                await prisma.grade.create({
-                    data: {
-                        submissionId: submission.id,
-                        score: result.score,
-                        status: 'RECOMMENDED',
-                        gradedByAI: true,
-                        breakdownJson: JSON.stringify(result)
-                    }
-                });
-            }
         }
 
         // If only evidence submission (no questions)

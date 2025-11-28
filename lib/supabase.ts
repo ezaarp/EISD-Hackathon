@@ -60,6 +60,16 @@ export async function deleteFile(bucket: string, path: string) {
 
 // Helper untuk download file URL
 export function getFileUrl(bucket: string, path: string) {
+  // Private buckets (evidence, violations, permissions) need signed URLs
+  const privateBuckets = ['evidence', 'violations', 'permissions'];
+
+  if (privateBuckets.includes(bucket)) {
+    // For private buckets, we need to generate signed URLs on the server
+    // This function will return a path that will be handled by an API route
+    return `/api/files/${bucket}/${encodeURIComponent(path)}`;
+  }
+
+  // For public buckets, use public URL
   const { data } = supabase.storage.from(bucket).getPublicUrl(path);
   return data.publicUrl;
 }

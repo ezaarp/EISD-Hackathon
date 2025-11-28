@@ -61,7 +61,7 @@ export default async function GradingPage() {
   });
 
   const pendingSubmissions = submissions.filter(
-    (s) => !s.grade || s.grade.status === 'RECOMMENDED'
+    (s) => !s.grade || s.grade.status === 'PENDING'
   );
   
   const gradedSubmissions = submissions.filter(

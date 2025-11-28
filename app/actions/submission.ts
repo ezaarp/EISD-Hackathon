@@ -3,7 +3,6 @@
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { gradeMCQ, gradeCode } from '@/lib/grading';
 import { revalidatePath } from 'next/cache';
 import { uploadFile } from '@/lib/supabase';
 
@@ -18,18 +17,13 @@ export async function submitMCQ(taskId: string, answers: Record<string, string>,
 
   if (!task) throw new Error('Task not found');
 
-  let totalScore = 0;
-  let maxScore = 0;
-
   // Process each question
   for (const question of task.questions) {
       const studentAnswer = answers[question.id];
       if (!studentAnswer) continue;
 
-      maxScore += question.points;
-      
       // Save submission
-      const submission = await prisma.submission.create({
+      await prisma.submission.create({
           data: {
               taskId,
               questionId: question.id,
@@ -40,36 +34,14 @@ export async function submitMCQ(taskId: string, answers: Record<string, string>,
               submittedAt: new Date(),
           }
       });
-
-      // Grade it
-      if (question.answerKey) {
-          const result = gradeMCQ(studentAnswer, question.answerKey);
-          const pointsEarned = (result.score / 100) * question.points;
-          totalScore += pointsEarned;
-
-          await prisma.grade.create({
-              data: {
-                  submissionId: submission.id,
-                  score: result.score,
-                  maxScore: 100, // Grade is 0-100 scale per question usually, or we store raw points?
-                  // Let's store normalized 0-100 score for the Submission Grade
-                  status: 'RECOMMENDED',
-                  gradedByAI: true,
-                  breakdownJson: JSON.stringify(result),
-              }
-          });
-      }
   }
 
-  // Calculate percentage score
-  const finalScore = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
-
-  return { 
-    success: true, 
-    score: finalScore, 
+  return {
+    success: true,
+    score: 0,
     total: 100,
-    pointsEarned: totalScore,
-    maxPoints: maxScore
+    pointsEarned: 0,
+    maxPoints: task.questions.reduce((sum, q) => sum + q.points, 0)
   };
 }
 
@@ -119,38 +91,6 @@ export async function submitCode(taskId: string, questionId: string, code: strin
             }
         });
         submissionId = sub.id;
-    }
-
-    // Grade it
-    if (question.answerKey) {
-        const result = gradeCode(code, question.answerKey);
-        
-        // Upsert grade
-        const existingGrade = await prisma.grade.findUnique({
-            where: { submissionId: submissionId! }
-        });
-
-        if (existingGrade) {
-             await prisma.grade.update({
-                where: { id: existingGrade.id },
-                data: {
-                    score: result.score,
-                    status: 'RECOMMENDED',
-                    gradedByAI: true,
-                    breakdownJson: JSON.stringify(result)
-                }
-             });
-        } else {
-            await prisma.grade.create({
-                data: {
-                    submissionId: submissionId!,
-                    score: result.score,
-                    status: 'RECOMMENDED',
-                    gradedByAI: true,
-                    breakdownJson: JSON.stringify(result)
-                }
-            });
-        }
     }
 
     revalidatePath('/live');
