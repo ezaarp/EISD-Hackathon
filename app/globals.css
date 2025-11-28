@@ -1,0 +1,207 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-bg: 15 23 42; /* slate-900 */
+    --color-primary: 79 70 229; /* indigo-600 */
+    --color-accent: 52 211 153; /* emerald-400 */
+    --color-danger: 244 63 94; /* rose-500 */
+    --color-warning: 251 191 36; /* amber-400 */
+  }
+
+  body {
+    @apply bg-slate-900 text-slate-100;
+  }
+
+  * {
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+  }
+}
+
+@layer components {
+  /* Pixel Border */
+  .pixel-border {
+    @apply border-4 border-black;
+  }
+
+  /* Pixel Shadow (Hard Shadow) */
+  .pixel-shadow {
+    box-shadow: 8px 8px 0px 0px rgba(0, 0, 0, 0.5);
+  }
+
+  .pixel-shadow-sm {
+    box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 0.5);
+  }
+
+  .pixel-shadow-lg {
+    box-shadow: 12px 12px 0px 0px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Pixel Outline untuk text */
+  .pixel-outline {
+    text-shadow:
+      -2px -2px 0 #000,
+       2px -2px 0 #000,
+      -2px  2px 0 #000,
+       2px  2px 0 #000;
+  }
+
+  /* Pixelated Image */
+  .pixelated {
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+  }
+
+  /* Pixel Button Base */
+  .pixel-btn {
+    @apply px-4 py-2 text-xs md:text-sm uppercase font-bold;
+    @apply transition-all active:translate-y-1;
+    @apply border-b-4 border-r-4 border-black;
+    @apply active:border-b-0 active:border-r-0 active:mt-1;
+  }
+
+  /* Pixel Card */
+  .pixel-card {
+    @apply relative border-4 border-black p-4;
+    @apply shadow-[8px_8px_0px_0px_rgba(0,0,0,0.5)];
+  }
+
+  /* Scanline effect (optional retro effect) */
+  .scanlines {
+    position: relative;
+  }
+
+  .scanlines::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0) 50%,
+      rgba(0, 0, 0, 0.1) 50%
+    );
+    background-size: 100% 4px;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Glitch text effect (optional) */
+  @keyframes glitch {
+    0% {
+      transform: translate(0);
+    }
+    20% {
+      transform: translate(-2px, 2px);
+    }
+    40% {
+      transform: translate(-2px, -2px);
+    }
+    60% {
+      transform: translate(2px, 2px);
+    }
+    80% {
+      transform: translate(2px, -2px);
+    }
+    100% {
+      transform: translate(0);
+    }
+  }
+
+  .glitch {
+    animation: glitch 0.3s linear infinite;
+  }
+
+  /* Blink animation untuk notifications */
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .blink {
+    animation: blink 1s linear infinite;
+  }
+
+  /* Pixel progress bar */
+  .pixel-progress {
+    @apply h-4 bg-slate-900 border-2 border-slate-600 relative overflow-hidden;
+  }
+
+  .pixel-progress-bar {
+    @apply h-full transition-all duration-500;
+  }
+
+  /* Terminal-like scrollbar */
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-slate-900 border-2 border-slate-700;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-600 border-2 border-slate-800;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-500;
+  }
+}
+
+@layer utilities {
+  /* Font utilities */
+  .font-pixel {
+    font-family: 'Press Start 2P', monospace;
+  }
+
+  /* No select untuk game-like UI */
+  .no-select {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+
+  /* CRT screen effect (optional) */
+  .crt-screen {
+    animation: flicker 0.15s infinite;
+  }
+
+  @keyframes flicker {
+    0% {
+      opacity: 0.97;
+    }
+    50% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0.97;
+    }
+  }
+
+  /* Typing animation */
+  @keyframes typing {
+    from {
+      width: 0;
+    }
+    to {
+      width: 100%;
+    }
+  }
+
+  .typing {
+    overflow: hidden;
+    white-space: nowrap;
+    animation: typing 2s steps(40, end);
+  }
+}

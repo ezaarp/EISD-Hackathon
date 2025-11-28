@@ -1,0 +1,799 @@
+// This is your Prisma schema file
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum UserRole {
+  PRAKTIKAN
+  ASISTEN
+  KOORDINATOR
+  SEKRETARIS
+  KOMDIS
+  PUBLIKASI
+  MEDIA
+  LABORAN
+  DOSEN
+  AI_SYSTEM
+}
+
+enum SessionStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum StageType {
+  OPENING
+  ABSEN
+  PRETEST
+  TP_REVIEW
+  JURNAL_REVIEW
+  JURNAL
+  POSTTEST
+  FEEDBACK
+}
+
+enum AttendanceStatus {
+  PRESENT
+  LATE
+  ABSENT
+  EXCUSED
+}
+
+enum SubmissionStatus {
+  DRAFT
+  SUBMITTED
+  AUTOSUBMITTED
+  LATE
+  GRADED
+}
+
+enum GradeStatus {
+  RECOMMENDED
+  APPROVED
+  REJECTED
+}
+
+enum QuestionType {
+  MCQ
+  CODE
+  UPLOAD
+  ESSAY
+}
+
+enum TaskType {
+  TP
+  JURNAL
+  PRETEST
+  POSTTEST
+}
+
+enum ContentType {
+  PDF
+  VIDEO
+  ZIP
+  PPT_PDF
+  LINK
+}
+
+enum PenaltyType {
+  LATE_JOIN
+  LATE_SUBMIT
+  VIOLATION_POINTS
+  CUSTOM
+}
+
+enum ViolationType {
+  LATE_ATTENDANCE
+  PLAGIARISM
+  CHEATING
+  DISRUPTIVE
+  DRESS_CODE
+  OTHER
+}
+
+enum PermissionType {
+  MAKEUP
+  SHIFT_CHANGE
+}
+
+enum PermissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum MakeupType {
+  PRETEST
+  JURNAL
+  POSTTEST
+  FULL
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum RatingType {
+  ASISTEN
+  PRAKTIKUM
+  MODUL
+}
+
+// ============================================
+// MAIN ENTITIES
+// ============================================
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique // NIM for students, kode asprak for others
+  name         String
+  email        String?  @unique
+  role         UserRole
+  passwordHash String
+
+  // Profile fields
+  nim          String?
+  phoneNumber  String?
+  profilePhoto String?
+  bio          String?
+
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  createdCourses       Course[]              @relation("CreatedByLaboran")
+  enrollments          StudentAssignment[]
+  assistantPlottings   Plotting[]
+  liveSessions         LiveSession[]         @relation("ControlledBy")
+  attendances          Attendance[]
+  submissions          Submission[]
+  grades               Grade[]               @relation("ApprovedBy")
+  penaltiesGiven       Penalty[]             @relation("AppliedBy")
+  penaltiesReceived    Penalty[]             @relation("ReceivedBy")
+  violationsReported   Violation[]           @relation("ReportedBy")
+  violationsReceived   Violation[]           @relation("ReceivedBy")
+  violationsVerified   Violation[]           @relation("VerifiedBy")
+  permissionRequests   PermissionRequest[]   @relation("Requester")
+  permissionsDecided   PermissionRequest[]   @relation("DecidedBy")
+  announcementsCreated Announcement[]
+  ticketsCreated       Ticket[]              @relation("StudentTickets")
+  ticketsAssigned      Ticket[]              @relation("AssistantTickets")
+  ticketMessages       TicketMessage[]
+  ratingsGiven         Rating[]
+  auditLogs            AuditLog[]
+  overriddenStages     LiveStage[]           @relation("OverriddenBy")
+  overriddenPenalties  Penalty[]             @relation("OverriddenBy")
+  markedAttendances    Attendance[]          @relation("MarkedBy")
+  mediaUploads         Media[]
+
+  @@index([username])
+  @@index([role])
+}
+
+model Course {
+  id                   String   @id @default(cuid())
+  code                 String   @unique // e.g., WAD2025-SI4801
+  title                String
+  description          String?
+  enrollPasswordHash   String   // Password untuk enroll
+  semester             String   // e.g., "2024/2025 Genap"
+  academicYear         String   // e.g., "2024/2025"
+
+  isActive             Boolean  @default(true)
+
+  createdById          String
+  createdBy            User     @relation("CreatedByLaboran", fields: [createdById], references: [id])
+
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  // Relations
+  shifts               Shift[]
+  modules              ModuleWeek[]
+  announcements        Announcement[]
+
+  @@index([code])
+  @@index([isActive])
+}
+
+model Shift {
+  id          String   @id @default(cuid())
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  shiftNo     Int      // 1, 2, 3, etc.
+  name        String   // e.g., "Shift 1 - Senin Pagi"
+  day         String   // SENIN, SELASA, etc.
+  startTime   String   // HH:mm format
+  endTime     String   // HH:mm format
+  room        String   // e.g., "Lab A203"
+
+  maxCapacity Int      @default(30)
+  status      String   @default("ACTIVE") // ACTIVE, CANCELLED
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  plottings          Plotting[]
+  studentAssignments StudentAssignment[]
+  liveSessions       LiveSession[]
+  announcements      Announcement[]
+
+  @@unique([courseId, shiftNo])
+  @@index([courseId])
+}
+
+model Plotting {
+  id          String   @id @default(cuid())
+  shiftId     String
+  shift       Shift    @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+
+  assistantId String
+  assistant   User     @relation(fields: [assistantId], references: [id])
+
+  plotNo      Int      // Plotting nomor berapa (1, 2, 3...)
+
+  createdAt   DateTime @default(now())
+
+  // Relations
+  studentAssignments StudentAssignment[]
+
+  @@unique([shiftId, assistantId])
+  @@unique([shiftId, plotNo])
+  @@index([shiftId])
+  @@index([assistantId])
+}
+
+model StudentAssignment {
+  id          String   @id @default(cuid())
+  shiftId     String
+  shift       Shift    @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+
+  studentId   String
+  student     User     @relation(fields: [studentId], references: [id])
+
+  plottingId  String
+  plotting    Plotting @relation(fields: [plottingId], references: [id])
+
+  enrolledAt  DateTime @default(now())
+
+  @@unique([shiftId, studentId])
+  @@index([studentId])
+  @@index([plottingId])
+}
+
+model ModuleWeek {
+  id          String   @id @default(cuid())
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  weekNo      Int      // 1, 2, 3, ... 14
+  title       String   // e.g., "Introduction to React Hooks"
+  description String?
+
+  releaseAt   DateTime // Kapan modul dibuka
+  deadlineTP  DateTime? // Deadline TP
+
+  // Flags untuk jenis konten
+  hasCodeBased Boolean  @default(false)
+  hasMCQ       Boolean  @default(false)
+  hasUploadOnly Boolean @default(false)
+
+  isActive    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  contents      Content[]
+  tasks         Task[]
+  liveSessions  LiveSession[]
+
+  @@unique([courseId, weekNo])
+  @@index([courseId])
+}
+
+model Content {
+  id            String      @id @default(cuid())
+  moduleWeekId  String
+  moduleWeek    ModuleWeek  @relation(fields: [moduleWeekId], references: [id], onDelete: Cascade)
+
+  title         String
+  type          ContentType
+  storagePath   String      // Path di Supabase Storage atau URL
+  fileSize      Int?        // Dalam bytes
+
+  visibility    String      @default("PUBLIC") // PUBLIC, ASISTEN_ONLY
+  sortOrder     Int         @default(0)
+
+  createdAt     DateTime    @default(now())
+
+  @@index([moduleWeekId])
+}
+
+model Task {
+  id            String     @id @default(cuid())
+  moduleWeekId  String
+  moduleWeek    ModuleWeek @relation(fields: [moduleWeekId], references: [id], onDelete: Cascade)
+
+  type          TaskType
+  title         String
+  instructions  String     @db.Text
+
+  templatePath  String?    // Path ke template ZIP untuk code-based
+  allowCopyPaste Boolean   @default(false)
+
+  // Untuk code-based: constraints
+  maxFileSize   Int?       // Dalam KB
+  allowedExtensions String? // Comma-separated: "js,jsx,ts,tsx"
+
+  isActive      Boolean    @default(true)
+  sortOrder     Int        @default(0)
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  // Relations
+  questions     Question[]
+  submissions   Submission[]
+
+  @@index([moduleWeekId])
+  @@index([type])
+}
+
+model Question {
+  id           String       @id @default(cuid())
+  taskId       String
+  task         Task         @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  type         QuestionType
+  questionNo   Int          // Nomor soal (1, 2, 3...)
+  prompt       String       @db.Text
+
+  // For MCQ
+  optionsJson  String?      @db.Text // JSON array of options
+
+  // For CODE
+  constraints  String?      @db.Text // JSON: { maxLines, timeout, memoryLimit }
+  testCases    String?      @db.Text // JSON array of test cases
+
+  points       Float        @default(0)
+
+  sortOrder    Int          @default(0)
+
+  createdAt    DateTime     @default(now())
+
+  // Relations
+  answerKey    AnswerKey?
+  submissions  Submission[]
+
+  @@index([taskId])
+}
+
+model AnswerKey {
+  id              String   @id @default(cuid())
+  questionId      String   @unique
+  question        Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  // For MCQ: option index (0, 1, 2, 3)
+  // For CODE: expected output or validation rules
+  correctAnswer   String   @db.Text
+
+  // For CODE: detailed rubric
+  rubricJson      String?  @db.Text // JSON: { criteria: [...], weights: [...] }
+
+  explanation     String?  @db.Text
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model LiveSession {
+  id              String        @id @default(cuid())
+  shiftId         String
+  shift           Shift         @relation(fields: [shiftId], references: [id])
+
+  moduleWeekId    String
+  moduleWeek      ModuleWeek    @relation(fields: [moduleWeekId], references: [id])
+
+  status          SessionStatus @default(DRAFT)
+  currentStageIndex Int         @default(0)
+
+  startedAt       DateTime?
+  endedAt         DateTime?
+
+  controlledById  String        // Publikasi yang mengontrol
+  controlledBy    User          @relation("ControlledBy", fields: [controlledById], references: [id])
+
+  notes           String?       @db.Text
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  stages          LiveStage[]
+  attendances     Attendance[]
+  submissions     Submission[]
+  violations      Violation[]
+  penalties       Penalty[]
+
+  @@index([shiftId])
+  @@index([moduleWeekId])
+  @@index([status])
+}
+
+model LiveStage {
+  id              String    @id @default(cuid())
+  liveSessionId   String
+  liveSession     LiveSession @relation(fields: [liveSessionId], references: [id], onDelete: Cascade)
+
+  type            StageType
+  stageOrder      Int       // Urutan stage (0, 1, 2...)
+
+  durationSec     Int       // Durasi dalam detik
+  startedAt       DateTime?
+  endedAt         DateTime?
+
+  isPaused        Boolean   @default(false)
+  pausedAt        DateTime?
+  resumedAt       DateTime?
+
+  // Override tracking
+  overrideReason  String?
+  overriddenById  String?
+  overriddenBy    User?     @relation("OverriddenBy", fields: [overriddenById], references: [id])
+
+  createdAt       DateTime  @default(now())
+
+  @@index([liveSessionId])
+  @@index([type])
+}
+
+model Attendance {
+  id              String           @id @default(cuid())
+  liveSessionId   String
+  liveSession     LiveSession      @relation(fields: [liveSessionId], references: [id])
+
+  studentId       String
+  student         User             @relation(fields: [studentId], references: [id])
+
+  status          AttendanceStatus
+  arrivedAt       DateTime?        // Kapan join/hadir
+
+  markedById      String           // KOMDIS yang menandai
+  markedBy        User             @relation("MarkedBy", fields: [markedById], references: [id])
+
+  note            String?
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@unique([liveSessionId, studentId])
+  @@index([studentId])
+  @@index([liveSessionId])
+}
+
+model Submission {
+  id              String           @id @default(cuid())
+
+  taskId          String
+  task            Task             @relation(fields: [taskId], references: [id])
+
+  questionId      String?          // Untuk per-question submission
+  question        Question?        @relation(fields: [questionId], references: [id])
+
+  studentId       String
+  student         User             @relation(fields: [studentId], references: [id])
+
+  liveSessionId   String?          // Jika submit saat live
+  liveSession     LiveSession?     @relation(fields: [liveSessionId], references: [id])
+
+  // Content
+  contentText     String?          @db.Text // Code atau essay answer
+  answersJson     String?          @db.Text // JSON untuk MCQ answers
+  evidencePdfPath String?          // Path ke PDF screenshot bukti
+
+  status          SubmissionStatus @default(DRAFT)
+
+  startedAt       DateTime         @default(now())
+  submittedAt     DateTime?
+  lastAutosaveAt  DateTime?
+
+  // Metadata
+  ipAddress       String?
+  userAgent       String?
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  // Relations
+  grade           Grade?
+  penalties       Penalty[]
+
+  @@index([taskId])
+  @@index([studentId])
+  @@index([status])
+}
+
+model Grade {
+  id              String      @id @default(cuid())
+  submissionId    String      @unique
+  submission      Submission  @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  // Grading breakdown
+  breakdownJson   String      @db.Text // JSON: { criteria: scores }
+  score           Float
+  maxScore        Float       @default(100)
+
+  status          GradeStatus @default(RECOMMENDED)
+
+  // AI atau manual
+  gradedByAI      Boolean     @default(false)
+
+  approvedById    String?
+  approvedBy      User?       @relation("ApprovedBy", fields: [approvedById], references: [id])
+
+  notes           String?     @db.Text
+  feedback        String?     @db.Text
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([status])
+  @@index([gradedByAI])
+}
+
+model Penalty {
+  id              String       @id @default(cuid())
+
+  studentId       String
+  student         User         @relation("ReceivedBy", fields: [studentId], references: [id])
+
+  liveSessionId   String?
+  liveSession     LiveSession? @relation(fields: [liveSessionId], references: [id])
+
+  submissionId    String?
+  submission      Submission?  @relation(fields: [submissionId], references: [id])
+
+  type            PenaltyType
+  percent         Float?       // Persen pengurangan (e.g., 10 = -10%)
+  points          Float?       // Poin langsung dikurangi
+
+  reason          String
+
+  appliedById     String       // System atau user ID
+  appliedBy       User         @relation("AppliedBy", fields: [appliedById], references: [id])
+
+  // Override tracking
+  overriddenById  String?
+  overriddenBy    User?        @relation("OverriddenBy", fields: [overriddenById], references: [id])
+  overrideReason  String?
+
+  createdAt       DateTime     @default(now())
+
+  @@index([studentId])
+  @@index([liveSessionId])
+}
+
+model Violation {
+  id              String         @id @default(cuid())
+
+  studentId       String
+  student         User           @relation("ReceivedBy", fields: [studentId], references: [id])
+
+  liveSessionId   String?
+  liveSession     LiveSession?   @relation(fields: [liveSessionId], references: [id])
+
+  type            ViolationType
+  points          Float          // Poin pelanggaran
+  description     String
+  evidencePath    String?        // Path ke foto/video bukti
+
+  reportedById    String?
+  reportedBy      User?          @relation("ReportedBy", fields: [reportedById], references: [id])
+
+  verifiedById    String?
+  verifiedBy      User?          @relation("VerifiedBy", fields: [verifiedById], references: [id])
+
+  status          String         @default("PENDING") // PENDING, VERIFIED, REJECTED
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([studentId])
+  @@index([status])
+}
+
+model PermissionRequest {
+  id              String           @id @default(cuid())
+
+  requesterId     String
+  requester       User             @relation("Requester", fields: [requesterId], references: [id])
+  requesterRole   UserRole
+
+  type            PermissionType
+
+  // For SHIFT_CHANGE
+  targetShiftId   String?
+
+  // For MAKEUP
+  moduleWeekId    String?
+  makeupType      MakeupType?
+
+  reason          String           @db.Text
+  evidencePath    String?          // Path ke bukti pendukung
+
+  status          PermissionStatus @default(PENDING)
+
+  decidedById     String?
+  decidedBy       User?            @relation("DecidedBy", fields: [decidedById], references: [id])
+  decisionNote    String?
+  decidedAt       DateTime?
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([requesterId])
+  @@index([status])
+  @@index([type])
+}
+
+model Announcement {
+  id          String   @id @default(cuid())
+
+  courseId    String?
+  course      Course?  @relation(fields: [courseId], references: [id])
+
+  shiftId     String?
+  shift       Shift?   @relation(fields: [shiftId], references: [id])
+
+  title       String
+  body        String   @db.Text
+  bannerPath  String?  // Path ke banner image
+
+  isPinned    Boolean  @default(false)
+  isActive    Boolean  @default(true)
+
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([courseId])
+  @@index([shiftId])
+  @@index([isActive])
+}
+
+model Ticket {
+  id          String       @id @default(cuid())
+
+  studentId   String
+  student     User         @relation("StudentTickets", fields: [studentId], references: [id])
+
+  assistantId String?
+  assistant   User?        @relation("AssistantTickets", fields: [assistantId], references: [id])
+
+  status      TicketStatus @default(OPEN)
+  subject     String
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations
+  messages    TicketMessage[]
+
+  @@index([studentId])
+  @@index([assistantId])
+  @@index([status])
+}
+
+model TicketMessage {
+  id        String   @id @default(cuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  senderId  String
+  sender    User     @relation(fields: [senderId], references: [id])
+
+  message   String   @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@index([ticketId])
+}
+
+model Rating {
+  id        String     @id @default(cuid())
+
+  studentId String
+  student   User       @relation(fields: [studentId], references: [id])
+
+  type      RatingType
+  targetId  String     // ID asisten, course, atau module
+
+  stars     Int        // 1-5
+  comment   String?    @db.Text
+
+  createdAt DateTime   @default(now())
+
+  @@index([type])
+  @@index([targetId])
+  @@index([studentId])
+}
+
+model Media {
+  id          String   @id @default(cuid())
+
+  title       String
+  description String?
+  type        String   // PHOTO, VIDEO
+  storagePath String   // Path di Supabase Storage
+
+  year        String?  // e.g., "2024"
+  angkatan    String?  // e.g., "2022"
+
+  uploadedById String
+  uploadedBy   User    @relation(fields: [uploadedById], references: [id])
+
+  createdAt   DateTime @default(now())
+
+  @@index([year])
+  @@index([angkatan])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+
+  actorId    String
+  actor      User     @relation(fields: [actorId], references: [id])
+  actorRole  UserRole
+
+  action     String   // e.g., "UPDATE", "DELETE", "OVERRIDE"
+  entity     String   // e.g., "LiveStage", "Penalty", "Grade"
+  entityId   String
+
+  beforeJson String?  @db.Text // State sebelum perubahan
+  afterJson  String?  @db.Text // State setelah perubahan
+
+  ipAddress  String?
+  userAgent  String?
+
+  createdAt  DateTime @default(now())
+
+  @@index([actorId])
+  @@index([entity])
+  @@index([createdAt])
+}
+
+// ============================================
+// SYSTEM SETTINGS (Optional)
+// ============================================
+
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String   @db.Text
+  dataType  String   // STRING, NUMBER, JSON, BOOLEAN
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
