@@ -301,12 +301,13 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
                     <p className="text-amber-300">Perhatikan materi yang disampaikan oleh Asisten Praktikum</p>
                 </div>
 
-                {session.presentationPath ? (
-                    <PixelCard title="PRESENTATION">
+                {session.tpReviewPresentationPath ? (
+                    <PixelCard title="TP PRESENTATION">
                         <PresentationViewer 
                             liveSessionId={liveSessionId}
-                            presentationUrl={getFileUrl('materials', session.presentationPath)}
-                            initialSlide={session.currentSlide || 1}
+                            presentationUrl={getFileUrl('materials', session.tpReviewPresentationPath)}
+                            initialSlide={session.tpReviewCurrentSlide || 1}
+                            presentationType="TP"
                         />
                     </PixelCard>
                 ) : (
@@ -326,12 +327,13 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
                     <p className="text-indigo-300">Perhatikan pembahasan yang disampaikan oleh Asisten Praktikum</p>
                 </div>
 
-                {session.presentationPath ? (
-                    <PixelCard title="PRESENTATION">
+                {session.jurnalReviewPresentationPath ? (
+                    <PixelCard title="JURNAL PRESENTATION">
                         <PresentationViewer 
                             liveSessionId={liveSessionId}
-                            presentationUrl={getFileUrl('materials', session.presentationPath)}
-                            initialSlide={session.currentSlide || 1}
+                            presentationUrl={getFileUrl('materials', session.jurnalReviewPresentationPath)}
+                            initialSlide={session.jurnalReviewCurrentSlide || 1}
+                            presentationType="JURNAL"
                         />
                     </PixelCard>
                 ) : (

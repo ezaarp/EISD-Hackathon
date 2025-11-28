@@ -10,13 +10,15 @@ interface PresentationViewerProps {
   presentationUrl: string;
   isController?: boolean;
   initialSlide?: number;
+  presentationType?: 'TP' | 'JURNAL';
 }
 
 export default function PresentationViewer({ 
   liveSessionId, 
   presentationUrl, 
   isController = false,
-  initialSlide = 1 
+  initialSlide = 1,
+  presentationType = 'TP'
 }: PresentationViewerProps) {
   const [currentSlide, setCurrentSlide] = useState(initialSlide);
 
@@ -46,7 +48,8 @@ export default function PresentationViewer({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         liveSessionId,
-        slideNumber: newSlide
+        slideNumber: newSlide,
+        presentationType
       })
     });
   };

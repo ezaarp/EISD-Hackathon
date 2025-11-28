@@ -426,9 +426,11 @@ model LiveSession {
 
   notes           String?       @db.Text
   
-  // Presentation slide for review stages
-  presentationPath String?      // Path to PDF presentation
-  currentSlide    Int           @default(1) // Current slide number
+  // Presentation slides for review stages (separate for each)
+  tpReviewPresentationPath      String?  // PDF for TP_REVIEW stage
+  tpReviewCurrentSlide          Int      @default(1)
+  jurnalReviewPresentationPath  String?  // PDF for JURNAL_REVIEW stage
+  jurnalReviewCurrentSlide      Int      @default(1)
 
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt

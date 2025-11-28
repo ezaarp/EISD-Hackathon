@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { StageType } from '@prisma/client';
+import { uploadFile } from '@/lib/supabase';
 
 export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
@@ -11,11 +12,19 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-        const { shiftId, moduleWeekId, controlledById, rundown } = await req.json();
+        const formData = await req.formData();
+        const shiftId = formData.get('shiftId') as string;
+        const moduleWeekId = formData.get('moduleWeekId') as string;
+        const controlledById = formData.get('controlledById') as string;
+        const rundownStr = formData.get('rundown') as string;
+        const tpPresentationFile = formData.get('tpPresentation') as File | null;
+        const jurnalPresentationFile = formData.get('jurnalPresentation') as File | null;
 
-        if (!shiftId || !moduleWeekId || !rundown) {
+        if (!shiftId || !moduleWeekId || !rundownStr) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
+
+        const rundown = JSON.parse(rundownStr);
 
         // Check if there's an existing active/draft session for this shift
         const existingSession = await prisma.liveSession.findFirst({
@@ -31,6 +40,32 @@ export async function POST(req: NextRequest) {
             }, { status: 400 });
         }
 
+        // Upload TP presentation if provided
+        let tpPresentationPath = null;
+        if (tpPresentationFile && tpPresentationFile.size > 0) {
+            const buffer = Buffer.from(await tpPresentationFile.arrayBuffer());
+            const path = `presentations/tp-${Date.now()}-${tpPresentationFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+            
+            const { path: storagePath } = await uploadFile('materials', path, buffer, {
+                contentType: 'application/pdf',
+                upsert: true
+            });
+            tpPresentationPath = storagePath;
+        }
+
+        // Upload JURNAL presentation if provided
+        let jurnalPresentationPath = null;
+        if (jurnalPresentationFile && jurnalPresentationFile.size > 0) {
+            const buffer = Buffer.from(await jurnalPresentationFile.arrayBuffer());
+            const path = `presentations/jurnal-${Date.now()}-${jurnalPresentationFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+            
+            const { path: storagePath } = await uploadFile('materials', path, buffer, {
+                contentType: 'application/pdf',
+                upsert: true
+            });
+            jurnalPresentationPath = storagePath;
+        }
+
         // Create the live session
         const liveSession = await prisma.liveSession.create({
             data: {
@@ -38,15 +73,11 @@ export async function POST(req: NextRequest) {
                 moduleWeekId,
                 controlledById,
                 status: 'DRAFT',
-                currentStageIndex: 0
-            }
-        });
-
-        // Store rundown as JSON in notes field (or create a new RundownConfig table if needed)
-        // For now, we'll just create the session and the client will manage stages
-        await prisma.liveSession.update({
-            where: { id: liveSession.id },
-            data: {
+                currentStageIndex: 0,
+                tpReviewPresentationPath: tpPresentationPath,
+                tpReviewCurrentSlide: 1,
+                jurnalReviewPresentationPath: jurnalPresentationPath,
+                jurnalReviewCurrentSlide: 1,
                 notes: JSON.stringify({
                     rundown: rundown.map((stage: any, index: number) => ({
                         order: index,

@@ -32,14 +32,30 @@ export default function EditLiveSessionForm({ liveSession, course }: { liveSessi
     }
   };
 
-  const handlePresentationUpload = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleTPPresentationUpload = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     
     setIsUploading(true);
     try {
-      await uploadPresentation(liveSession.id, formData);
-      alert('Presentation uploaded successfully!');
+      await uploadPresentation(liveSession.id, formData, 'TP');
+      alert('TP Presentation uploaded successfully!');
+      window.location.reload();
+    } catch (error: any) {
+      alert('Failed to upload: ' + error.message);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleJurnalPresentationUpload = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    
+    setIsUploading(true);
+    try {
+      await uploadPresentation(liveSession.id, formData, 'JURNAL');
+      alert('Jurnal Presentation uploaded successfully!');
       window.location.reload();
     } catch (error: any) {
       alert('Failed to upload: ' + error.message);
@@ -106,66 +122,110 @@ export default function EditLiveSessionForm({ liveSession, course }: { liveSessi
         </PixelCard>
       </form>
 
-      {/* Presentation Upload */}
-      <PixelCard title="PRESENTATION SLIDES (For Review Stages)">
-        <div className="space-y-4">
-          <p className="text-sm text-slate-300 mb-4">
-            Upload a PDF presentation (landscape) that will be displayed during TP_REVIEW and JURNAL_REVIEW stages. 
-            Praktikan will see the same slides in sync with your controls.
-          </p>
+      {/* Presentation Upload - Separate for TP and JURNAL */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* TP REVIEW Presentation */}
+        <PixelCard title="TP_REVIEW PRESENTATION" color="bg-amber-900/30">
+          <div className="space-y-4">
+            <p className="text-sm text-slate-300">
+              PDF untuk sesi <span className="text-amber-400 font-bold">TP_REVIEW</span>
+            </p>
 
-          {liveSession.presentationPath && (
-            <div className="bg-emerald-900/50 border border-emerald-500 p-4 mb-4">
-              <div className="flex items-center gap-3">
-                <FileText size={32} className="text-emerald-400" />
-                <div>
-                  <p className="font-bold text-white">Current Presentation</p>
-                  <p className="text-xs text-emerald-300">{liveSession.presentationPath.split('/').pop()}</p>
+            {liveSession.tpReviewPresentationPath && (
+              <div className="bg-amber-900/50 border border-amber-500 p-4">
+                <div className="flex items-center gap-3">
+                  <FileText size={24} className="text-amber-400" />
+                  <div>
+                    <p className="font-bold text-white text-sm">Current TP PPT</p>
+                    <p className="text-xs text-amber-300">{liveSession.tpReviewPresentationPath.split('/').pop()}</p>
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <PixelButton 
+                    href={getFileUrl('materials', liveSession.tpReviewPresentationPath)}
+                    variant="outline"
+                    className="text-xs w-full"
+                  >
+                    VIEW
+                  </PixelButton>
                 </div>
               </div>
-              <div className="mt-3">
-                <PixelButton 
-                  href={getFileUrl('materials', liveSession.presentationPath)}
-                  variant="outline"
-                  className="text-xs"
-                >
-                  VIEW PRESENTATION
-                </PixelButton>
-              </div>
-            </div>
-          )}
+            )}
 
-          <form onSubmit={handlePresentationUpload}>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs text-slate-400 mb-2 uppercase">
-                  Upload New Presentation (PDF)
-                </label>
+            <form onSubmit={handleTPPresentationUpload}>
+              <div className="space-y-3">
                 <input 
                   type="file" 
-                  name="presentation" 
+                  name="tpPresentation" 
                   accept=".pdf"
-                  className="w-full bg-black border border-slate-700 p-3 text-white"
+                  className="w-full bg-black border border-amber-700 p-2 text-white text-sm"
                   required
                 />
-                <p className="text-xs text-slate-500 mt-1">
-                  Recommended: Landscape orientation (16:9 or 4:3)
-                </p>
+                <PixelButton 
+                  type="submit" 
+                  variant="warning" 
+                  disabled={isUploading}
+                  className="w-full text-xs"
+                >
+                  <Upload size={16} className="mr-2" />
+                  {isUploading ? 'UPLOADING...' : 'UPLOAD TP PPT'}
+                </PixelButton>
               </div>
+            </form>
+          </div>
+        </PixelCard>
 
-              <PixelButton 
-                type="submit" 
-                variant="success" 
-                disabled={isUploading}
-                className="w-full"
-              >
-                <Upload size={20} className="mr-2" />
-                {isUploading ? 'UPLOADING...' : 'UPLOAD PRESENTATION'}
-              </PixelButton>
-            </div>
-          </form>
-        </div>
-      </PixelCard>
+        {/* JURNAL REVIEW Presentation */}
+        <PixelCard title="JURNAL_REVIEW PRESENTATION" color="bg-indigo-900/30">
+          <div className="space-y-4">
+            <p className="text-sm text-slate-300">
+              PDF untuk sesi <span className="text-indigo-400 font-bold">JURNAL_REVIEW</span>
+            </p>
+
+            {liveSession.jurnalReviewPresentationPath && (
+              <div className="bg-indigo-900/50 border border-indigo-500 p-4">
+                <div className="flex items-center gap-3">
+                  <FileText size={24} className="text-indigo-400" />
+                  <div>
+                    <p className="font-bold text-white text-sm">Current Jurnal PPT</p>
+                    <p className="text-xs text-indigo-300">{liveSession.jurnalReviewPresentationPath.split('/').pop()}</p>
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <PixelButton 
+                    href={getFileUrl('materials', liveSession.jurnalReviewPresentationPath)}
+                    variant="outline"
+                    className="text-xs w-full"
+                  >
+                    VIEW
+                  </PixelButton>
+                </div>
+              </div>
+            )}
+
+            <form onSubmit={handleJurnalPresentationUpload}>
+              <div className="space-y-3">
+                <input 
+                  type="file" 
+                  name="jurnalPresentation" 
+                  accept=".pdf"
+                  className="w-full bg-black border border-indigo-700 p-2 text-white text-sm"
+                  required
+                />
+                <PixelButton 
+                  type="submit" 
+                  variant="primary" 
+                  disabled={isUploading}
+                  className="w-full text-xs"
+                >
+                  <Upload size={16} className="mr-2" />
+                  {isUploading ? 'UPLOADING...' : 'UPLOAD JURNAL PPT'}
+                </PixelButton>
+              </div>
+            </form>
+          </div>
+        </PixelCard>
+      </div>
 
       {/* Session Info */}
       <PixelCard title="SESSION INFO">

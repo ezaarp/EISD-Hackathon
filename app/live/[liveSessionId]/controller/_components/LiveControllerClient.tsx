@@ -166,18 +166,36 @@ export default function LiveControllerClient({ session, liveSessionId }: { sessi
         </div>
       )}
 
-      {/* Presentation Controller - Show during review stages */}
-      {isReviewStage && session.presentationPath && (
-        <PixelCard title="PRESENTATION CONTROLLER" color="bg-indigo-900/50">
+      {/* TP_REVIEW Presentation Controller */}
+      {currentStage === 'TP_REVIEW' && session.tpReviewPresentationPath && (
+        <PixelCard title="TP_REVIEW PRESENTATION CONTROLLER" color="bg-amber-900/50">
           <PresentationViewer 
             liveSessionId={liveSessionId}
-            presentationUrl={getFileUrl('materials', session.presentationPath)}
-            initialSlide={session.currentSlide || 1}
+            presentationUrl={getFileUrl('materials', session.tpReviewPresentationPath)}
+            initialSlide={session.tpReviewCurrentSlide || 1}
             isController={true}
+            presentationType="TP"
+          />
+          <p className="text-xs text-amber-300 mt-4 text-center">
+            <Presentation size={14} className="inline mr-2" />
+            Students will see the same TP slide in sync
+          </p>
+        </PixelCard>
+      )}
+
+      {/* JURNAL_REVIEW Presentation Controller */}
+      {currentStage === 'JURNAL_REVIEW' && session.jurnalReviewPresentationPath && (
+        <PixelCard title="JURNAL_REVIEW PRESENTATION CONTROLLER" color="bg-indigo-900/50">
+          <PresentationViewer 
+            liveSessionId={liveSessionId}
+            presentationUrl={getFileUrl('materials', session.jurnalReviewPresentationPath)}
+            initialSlide={session.jurnalReviewCurrentSlide || 1}
+            isController={true}
+            presentationType="JURNAL"
           />
           <p className="text-xs text-indigo-300 mt-4 text-center">
             <Presentation size={14} className="inline mr-2" />
-            Students will see the same slide in sync
+            Students will see the same Jurnal slide in sync
           </p>
         </PixelCard>
       )}

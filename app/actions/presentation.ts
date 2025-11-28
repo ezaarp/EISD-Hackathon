@@ -21,20 +21,22 @@ async function broadcastSlideChange(sessionId: string, slideNumber: number) {
         });
 }
 
-export async function uploadPresentation(liveSessionId: string, formData: FormData) {
+export async function uploadPresentation(liveSessionId: string, formData: FormData, type: 'TP' | 'JURNAL') {
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== 'PUBLIKASI') {
         throw new Error('Unauthorized');
     }
 
-    const file = formData.get('presentation') as File;
+    const fieldName = type === 'TP' ? 'tpPresentation' : 'jurnalPresentation';
+    const file = formData.get(fieldName) as File;
+    
     if (!file || file.type !== 'application/pdf') {
         throw new Error('Please upload a PDF file');
     }
 
     // Upload to Supabase Storage
     const buffer = Buffer.from(await file.arrayBuffer());
-    const path = `presentations/${liveSessionId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+    const path = `presentations/${liveSessionId}/${type.toLowerCase()}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
     
     const { path: storagePath } = await uploadFile('materials', path, buffer, {
         contentType: 'application/pdf',
@@ -42,27 +44,32 @@ export async function uploadPresentation(liveSessionId: string, formData: FormDa
     });
 
     // Update live session
+    const updateData = type === 'TP' 
+        ? { tpReviewPresentationPath: storagePath, tpReviewCurrentSlide: 1 }
+        : { jurnalReviewPresentationPath: storagePath, jurnalReviewCurrentSlide: 1 };
+
     await prisma.liveSession.update({
         where: { id: liveSessionId },
-        data: {
-            presentationPath: storagePath,
-            currentSlide: 1
-        }
+        data: updateData
     });
 
     revalidatePath(`/live/${liveSessionId}/controller`);
     return { success: true, path: storagePath };
 }
 
-export async function changeSlide(liveSessionId: string, slideNumber: number) {
+export async function changeSlide(liveSessionId: string, slideNumber: number, type: 'TP' | 'JURNAL') {
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== 'PUBLIKASI') {
         throw new Error('Unauthorized');
     }
 
+    const updateData = type === 'TP' 
+        ? { tpReviewCurrentSlide: slideNumber }
+        : { jurnalReviewCurrentSlide: slideNumber };
+
     await prisma.liveSession.update({
         where: { id: liveSessionId },
-        data: { currentSlide: slideNumber }
+        data: updateData
     });
 
     await broadcastSlideChange(liveSessionId, slideNumber);

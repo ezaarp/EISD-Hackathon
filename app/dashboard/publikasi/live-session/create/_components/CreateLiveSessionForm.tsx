@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { PixelButton, PixelCard } from '@/components/ui';
-import { Plus, Trash2, Play } from 'lucide-react';
+import { Plus, Trash2, Play, Upload } from 'lucide-react';
 import { StageType } from '@prisma/client';
 
 const STAGE_OPTIONS: StageType[] = [
@@ -51,7 +51,7 @@ export default function CreateLiveSessionForm({ courses, userId }: { courses: an
     setRundown(newRundown);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     if (!selectedShift || !selectedModule) {
@@ -59,16 +59,16 @@ export default function CreateLiveSessionForm({ courses, userId }: { courses: an
       return;
     }
 
+    const formData = new FormData(e.currentTarget);
+    formData.append('shiftId', selectedShift);
+    formData.append('moduleWeekId', selectedModule);
+    formData.append('controlledById', userId);
+    formData.append('rundown', JSON.stringify(rundown));
+
     try {
       const response = await fetch('/api/create-live-session', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          shiftId: selectedShift,
-          moduleWeekId: selectedModule,
-          controlledById: userId,
-          rundown
-        })
+        body: formData // Send as FormData to support file upload
       });
 
       if (!response.ok) throw new Error('Failed to create session');
@@ -208,6 +208,63 @@ export default function CreateLiveSessionForm({ courses, userId }: { courses: an
           )}
         </div>
       </PixelCard>
+
+      {/* Presentation Upload - Separate for TP and JURNAL */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <PixelCard title="TP_REVIEW PRESENTATION" color="bg-amber-900/30">
+          <div className="space-y-4">
+            <p className="text-sm text-slate-300">
+              PDF untuk sesi <span className="text-amber-400 font-bold">TP_REVIEW</span>
+            </p>
+            <p className="text-xs text-slate-400">
+              Materi pembahasan Tugas Pendahuluan
+            </p>
+            
+            <div>
+              <label className="block text-xs text-slate-400 mb-2 uppercase">
+                <Upload size={14} className="inline mr-2" />
+                Upload PDF (Landscape)
+              </label>
+              <input 
+                type="file" 
+                name="tpPresentation" 
+                accept=".pdf"
+                className="w-full bg-black border border-amber-700 p-3 text-white"
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                Optional - 16:9 atau 4:3 format
+              </p>
+            </div>
+          </div>
+        </PixelCard>
+
+        <PixelCard title="JURNAL_REVIEW PRESENTATION" color="bg-indigo-900/30">
+          <div className="space-y-4">
+            <p className="text-sm text-slate-300">
+              PDF untuk sesi <span className="text-indigo-400 font-bold">JURNAL_REVIEW</span>
+            </p>
+            <p className="text-xs text-slate-400">
+              Materi pembahasan Jurnal
+            </p>
+            
+            <div>
+              <label className="block text-xs text-slate-400 mb-2 uppercase">
+                <Upload size={14} className="inline mr-2" />
+                Upload PDF (Landscape)
+              </label>
+              <input 
+                type="file" 
+                name="jurnalPresentation" 
+                accept=".pdf"
+                className="w-full bg-black border border-indigo-700 p-3 text-white"
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                Optional - 16:9 atau 4:3 format
+              </p>
+            </div>
+          </div>
+        </PixelCard>
+      </div>
 
       {/* Submit */}
       <div className="flex justify-end gap-4">
