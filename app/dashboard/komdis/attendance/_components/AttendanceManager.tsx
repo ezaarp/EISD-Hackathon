@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { markAttendance } from '@/app/actions/komdis';
 import { PixelCard, PixelButton } from '@/components/ui';
 import { Check, X, Clock } from 'lucide-react';
-import { createClient } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 export default function AttendanceManager({ session, students, attendances }: { session: any, students: any[], attendances: any[] }) {
   const [loading, setLoading] = useState<string | null>(null);
@@ -12,7 +12,6 @@ export default function AttendanceManager({ session, students, attendances }: { 
 
   // Initialize Supabase for realtime updates if needed, though Komdis usually initiates
   // But if another Komdis updates, we want to see it.
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
   useEffect(() => {
       const channel = supabase.channel(`live-${session.id}`)

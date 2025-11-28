@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { createContent, createTask, createQuestion } from '@/app/actions/publikasi';
+import { createContent, createTask, createQuestion, uploadMaterial } from '@/app/actions/publikasi';
 import { PixelCard, PixelButton } from '@/components/ui';
 import { FileText, Plus, X } from 'lucide-react';
 
@@ -14,21 +14,17 @@ export default function ModuleManager({ moduleWeek }: { moduleWeek: any }) {
   const handleAddMaterial = async (formData: FormData) => {
       setLoading(true);
       try {
-          // In a real app, we would upload the file here first
-          // const file = formData.get('file');
-          // const uploadRes = await uploadFile(file);
-          
-          // Mocking file path for hackathon
-          const mockPath = `materials/week${moduleWeek.weekNo}/${(formData.get('file') as File).name}`;
+          // Upload file first
+          const storagePath = await uploadMaterial(formData);
           
           await createContent(moduleWeek.id, {
               title: formData.get('title') as string,
               type: formData.get('type') as any,
-              storagePath: mockPath 
+              storagePath: storagePath 
           });
           setShowAddMaterial(false);
-      } catch (e) {
-          alert('Failed to add material');
+      } catch (e: any) {
+          alert('Failed to add material: ' + e.message);
       } finally {
           setLoading(false);
       }
@@ -43,8 +39,8 @@ export default function ModuleManager({ moduleWeek }: { moduleWeek: any }) {
               instructions: formData.get('instructions') as string
           });
           setShowAddTask(false);
-      } catch (e) {
-          alert('Failed to create task');
+      } catch (e: any) {
+          alert('Failed to create task: ' + e.message);
       } finally {
           setLoading(false);
       }
@@ -62,8 +58,8 @@ export default function ModuleManager({ moduleWeek }: { moduleWeek: any }) {
               points: parseFloat(formData.get('points') as string)
           });
           setShowAddQuestion(null);
-      } catch (e) {
-          alert('Failed to add question');
+      } catch (e: any) {
+          alert('Failed to add question: ' + e.message);
       } finally {
           setLoading(false);
       }
@@ -95,6 +91,7 @@ export default function ModuleManager({ moduleWeek }: { moduleWeek: any }) {
                     <button onClick={() => setShowAddMaterial(false)} className="absolute top-2 right-2 text-slate-400"><X size={16} /></button>
                     <form action={handleAddMaterial} className="space-y-3">
                         <p className="text-xs font-bold text-emerald-400 mb-2">UPLOAD NEW MATERIAL</p>
+                        <input type="hidden" name="moduleWeekId" value={moduleWeek.id} />
                         <input name="title" placeholder="Title" className="w-full bg-black p-2 text-sm border border-slate-700" required />
                         <select name="type" className="w-full bg-black p-2 text-sm border border-slate-700">
                             <option value="PDF">PDF Document</option>
@@ -183,4 +180,3 @@ export default function ModuleManager({ moduleWeek }: { moduleWeek: any }) {
     </div>
   );
 }
-
