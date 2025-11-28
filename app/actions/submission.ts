@@ -17,31 +17,105 @@ export async function submitMCQ(taskId: string, answers: Record<string, string>,
 
   if (!task) throw new Error('Task not found');
 
-  // Process each question
+  // Calculate score
+  let totalPoints = 0;
+  let earnedPoints = 0;
+  const processedAnswers: any[] = [];
+
   for (const question of task.questions) {
       const studentAnswer = answers[question.id];
-      if (!studentAnswer) continue;
+      const points = question.points || 10; // Default points if not set
+      totalPoints += points;
 
-      // Save submission
-      await prisma.submission.create({
+      if (studentAnswer) {
+          // Check answer
+          const isCorrect = question.answerKey?.correctAnswer === studentAnswer;
+          if (isCorrect) {
+              earnedPoints += points;
+          }
+          
+          processedAnswers.push({
+              questionId: question.id,
+              answer: studentAnswer,
+              isCorrect
+          });
+      }
+  }
+
+  const finalScore = totalPoints > 0 ? (earnedPoints / totalPoints) * 100 : 0;
+
+  // Check for existing submission for this TASK (not per question)
+  const existingSubmission = await prisma.submission.findFirst({
+      where: {
+          taskId,
+          studentId: session.user.id,
+          questionId: null // Task-level submission
+      }
+  });
+
+  let submissionId = existingSubmission?.id;
+
+  if (existingSubmission) {
+      await prisma.submission.update({
+          where: { id: existingSubmission.id },
+          data: {
+              answersJson: JSON.stringify(processedAnswers),
+              status: 'GRADED',
+              submittedAt: new Date(),
+              liveSessionId
+          }
+      });
+  } else {
+      const sub = await prisma.submission.create({
           data: {
               taskId,
-              questionId: question.id,
               studentId: session.user.id,
               liveSessionId,
-              answersJson: JSON.stringify({ answer: studentAnswer }),
-              status: 'SUBMITTED',
+              answersJson: JSON.stringify(processedAnswers),
+              status: 'GRADED',
               submittedAt: new Date(),
+              questionId: null
+          }
+      });
+      submissionId = sub.id;
+  }
+
+  // Create or Update Grade immediately
+  const existingGrade = await prisma.grade.findUnique({
+      where: { submissionId: submissionId! }
+  });
+
+  if (existingGrade) {
+      await prisma.grade.update({
+          where: { id: existingGrade.id },
+          data: {
+              score: finalScore,
+              status: 'APPROVED',
+              gradedByAI: true,
+              approvedAt: new Date(),
+              notes: 'Auto-graded MCQ'
+          }
+      });
+  } else {
+      await prisma.grade.create({
+          data: {
+              submission: { connect: { id: submissionId! } },
+              score: finalScore,
+              status: 'APPROVED',
+              gradedByAI: true,
+              approvedAt: new Date(),
+              notes: 'Auto-graded MCQ',
+              breakdownJson: JSON.stringify(processedAnswers)
           }
       });
   }
 
   return {
     success: true,
-    score: 0,
+    score: finalScore,
     total: 100,
-    pointsEarned: 0,
-    maxPoints: task.questions.reduce((sum, q) => sum + q.points, 0)
+    pointsEarned: earnedPoints,
+    maxPoints: totalPoints
   };
 }
 

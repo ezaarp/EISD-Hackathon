@@ -28,11 +28,11 @@ export async function updateGrade(submissionId: string, score: number, notes: st
     } else {
         await prisma.grade.create({
             data: {
-                submissionId,
+                submission: { connect: { id: submissionId } },
                 score,
                 notes,
                 status: 'PENDING',
-                breakdownJson: null
+                breakdownJson: "{}"
             }
         });
     }
@@ -47,13 +47,23 @@ export async function approveGrade(submissionId: string, finalScore?: number, fi
         throw new Error('Unauthorized');
     }
 
-    const grade = await prisma.grade.findUnique({
+    let grade = await prisma.grade.findUnique({
         where: { submissionId },
         include: { submission: true }
     });
 
     if (!grade) {
-        throw new Error('Grade not found');
+        // Create grade if it doesn't exist
+        grade = await prisma.grade.create({
+            data: {
+                submission: { connect: { id: submissionId } },
+                score: finalScore ?? 0,
+                notes: finalNotes ?? '',
+                status: 'PENDING',
+                breakdownJson: "{}"
+            },
+            include: { submission: true }
+        });
     }
 
     await prisma.grade.update({
@@ -84,12 +94,21 @@ export async function rejectGrade(submissionId: string, reason: string) {
         throw new Error('Unauthorized');
     }
 
-    const grade = await prisma.grade.findUnique({
+    let grade = await prisma.grade.findUnique({
         where: { submissionId }
     });
 
     if (!grade) {
-        throw new Error('Grade not found');
+        // Create grade if it doesn't exist
+        grade = await prisma.grade.create({
+            data: {
+                submission: { connect: { id: submissionId } },
+                score: 0,
+                notes: reason,
+                status: 'PENDING',
+                breakdownJson: "{}"
+            }
+        });
     }
 
     await prisma.grade.update({
