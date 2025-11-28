@@ -202,7 +202,7 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
         alert('Please select a rating');
         return;
       }
-      
+
       try {
         const response = await fetch('/api/feedback', {
           method: 'POST',
@@ -214,13 +214,11 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
             type: 'PRAKTIKUM'
           })
         });
-        
+
         if (!response.ok) throw new Error('Failed to submit feedback');
-        
+
+        // Lock feedback form permanently
         setShowFeedbackThankYou(true);
-        setTimeout(() => {
-          setShowFeedbackThankYou(false);
-        }, 3000);
       } catch (e: any) {
         alert('Failed to submit feedback: ' + e.message);
       }
@@ -578,8 +576,8 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
                         <h2 className="text-xl font-bold text-white">Rate this Session</h2>
                         <div className="flex justify-center gap-2">
                             {[1,2,3,4,5].map(star => (
-                                <button 
-                                    key={star} 
+                                <button
+                                    key={star}
                                     onClick={() => setFeedbackRating(star)}
                                     className={`text-4xl transition-all hover:scale-125 ${feedbackRating >= star ? 'opacity-100' : 'opacity-30'}`}
                                 >
@@ -587,8 +585,8 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
                                 </button>
                             ))}
                         </div>
-                        <textarea 
-                            className="w-full bg-slate-800 border border-slate-600 p-3 text-white min-h-[120px]" 
+                        <textarea
+                            className="w-full bg-slate-800 border border-slate-600 p-3 text-white min-h-[120px]"
                             placeholder="Any comments or suggestions?"
                             value={feedbackComment}
                             onChange={(e) => setFeedbackComment(e.target.value)}
@@ -598,10 +596,22 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
                         </PixelButton>
                     </div>
                 ) : (
-                    <div className="text-center py-12 space-y-4">
+                    <div className="text-center py-12 space-y-6">
                         <CheckCircle size={64} className="mx-auto text-emerald-400" />
                         <h2 className="text-2xl font-pixel text-emerald-400">TERIMA KASIH!</h2>
-                        <p className="text-lg text-slate-300">Telah mengisi feedback</p>
+                        <p className="text-lg text-slate-300 mb-4">Telah mengisi feedback</p>
+
+                        {endTime && (
+                            <div className="bg-slate-800 border-2 border-slate-700 p-6 mt-6">
+                                <div className="text-sm text-slate-400 mb-2">Sisa Waktu Sesi:</div>
+                                <div className="text-5xl font-pixel text-emerald-400">
+                                    <Countdown target={endTime} />
+                                </div>
+                            </div>
+                        )}
+
+                        <p className="text-lg text-white mt-6">Silahkan tunggu hingga waktu sesi habis</p>
+                        <p className="text-xs text-slate-500">Mohon tunggu hingga sesi selesai</p>
                     </div>
                 )}
             </PixelCard>

@@ -167,6 +167,15 @@ export async function uploadEvidence(formData: FormData) {
 
     if (!file || !taskId) throw new Error('Missing required fields');
 
+    // Validate file
+    if (file.size === 0) {
+        throw new Error('File is empty');
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+        throw new Error('File size must be less than 10MB');
+    }
+
     // Convert to Buffer
     const buffer = Buffer.from(await file.arrayBuffer());
     const path = `${session.user.id}/${taskId}/${Date.now()}-${file.name}`;
@@ -177,42 +186,53 @@ export async function uploadEvidence(formData: FormData) {
         upsert: true
     });
 
-    // Find submission to update (or create if not exists)
-    // Usually code submission exists as draft
-    // We attach evidence to the first question submission of the task or creates a new one?
-    // Schema has evidencePdfPath on Submission. A Task might have multiple questions (Jurnal usually has multiple numbers).
-    // Usually evidence is ONE PDF for the whole Jurnal.
-    // But our Submission model is per-question (questionId is optional?).
-    // Let's see schema: questionId String?
-    // So we can create a submission for the Task without a questionId specifically for the Evidence?
-    // Or attach to the first question?
-    // Best practice: Create a submission entry specifically for the evidence if it applies to the whole task.
-
-    // Check if there is a "general" submission for this task (no questionId)
-    let submission = await prisma.submission.findFirst({
+    // Try to find existing code submission first (with questionId)
+    const codeSubmission = await prisma.submission.findFirst({
         where: {
             taskId,
-            questionId: null,
-            studentId: session.user.id
-        }
+            studentId: session.user.id,
+            questionId: { not: null }
+        },
+        orderBy: { createdAt: 'desc' }
     });
 
-    if (submission) {
+    if (codeSubmission) {
+        // Attach PDF to existing code submission
         await prisma.submission.update({
-            where: { id: submission.id },
-            data: { evidencePdfPath: storagePath, liveSessionId }
-        });
-    } else {
-        await prisma.submission.create({
+            where: { id: codeSubmission.id },
             data: {
-                taskId,
-                studentId: session.user.id,
-                liveSessionId,
                 evidencePdfPath: storagePath,
-                status: 'SUBMITTED' // Evidence submitted
+                liveSessionId: liveSessionId || codeSubmission.liveSessionId
             }
         });
+    } else {
+        // No code submission yet, create standalone evidence submission
+        let submission = await prisma.submission.findFirst({
+            where: {
+                taskId,
+                questionId: null,
+                studentId: session.user.id
+            }
+        });
+
+        if (submission) {
+            await prisma.submission.update({
+                where: { id: submission.id },
+                data: { evidencePdfPath: storagePath, liveSessionId }
+            });
+        } else {
+            await prisma.submission.create({
+                data: {
+                    taskId,
+                    studentId: session.user.id,
+                    liveSessionId,
+                    evidencePdfPath: storagePath,
+                    status: 'SUBMITTED'
+                }
+            });
+        }
     }
 
+    revalidatePath('/dashboard/asisten/grading');
     return { success: true };
 }

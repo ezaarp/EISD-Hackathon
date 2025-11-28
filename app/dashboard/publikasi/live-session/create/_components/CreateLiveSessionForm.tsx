@@ -71,12 +71,16 @@ export default function CreateLiveSessionForm({ courses, userId }: { courses: an
         body: formData // Send as FormData to support file upload
       });
 
-      if (!response.ok) throw new Error('Failed to create session');
-
       const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create session');
+      }
+
       window.location.href = `/live/${data.liveSessionId}/controller`;
     } catch (error: any) {
-      alert('Error: ' + error.message);
+      console.error('Create session error:', error);
+      alert('Error creating session: ' + error.message);
     }
   };
 
