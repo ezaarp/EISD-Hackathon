@@ -6,18 +6,22 @@ import { authOptions } from '@/lib/auth';
 import { uploadFile } from '@/lib/supabase';
 import { revalidatePath } from 'next/cache';
 
-async function broadcastSlideChange(sessionId: string, slideNumber: number) {
+async function broadcastSlideChange(sessionId: string, slideNumber: number, presentationType: 'TP' | 'JURNAL') {
     const { createClient } = await import('@supabase/supabase-js');
     const supabase = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    await supabase.channel(`live-${sessionId}`)
+    // Use dedicated presentation channel to avoid conflicts with main live channel
+    await supabase.channel(`live-presentation-${sessionId}`)
         .send({
             type: 'broadcast',
             event: 'slide_change',
-            payload: { slide: slideNumber }
+            payload: {
+                slide: slideNumber,
+                presentationType: presentationType
+            }
         });
 }
 
@@ -79,7 +83,7 @@ export async function changeSlide(liveSessionId: string, slideNumber: number, ty
         throw new Error('Unauthorized');
     }
 
-    const updateData = type === 'TP' 
+    const updateData = type === 'TP'
         ? { tpReviewCurrentSlide: slideNumber }
         : { jurnalReviewCurrentSlide: slideNumber };
 
@@ -88,8 +92,8 @@ export async function changeSlide(liveSessionId: string, slideNumber: number, ty
         data: updateData
     });
 
-    await broadcastSlideChange(liveSessionId, slideNumber);
-    
+    await broadcastSlideChange(liveSessionId, slideNumber, type);
+
     revalidatePath(`/live/${liveSessionId}/controller`);
     return { success: true };
 }

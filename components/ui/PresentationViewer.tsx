@@ -25,17 +25,20 @@ export default function PresentationViewer({
   useEffect(() => {
     if (isController) return; // Controller doesn't listen, it broadcasts
 
-    const channel = supabase.channel(`live-${liveSessionId}`)
+    // Use a dedicated channel for presentation to avoid conflicts with main live channel
+    const channel = supabase.channel(`live-presentation-${liveSessionId}`)
       .on('broadcast', { event: 'slide_change' }, (payload) => {
-        console.log('Slide change:', payload);
-        setCurrentSlide(payload.payload.slide);
+        console.log('[PresentationViewer] Slide change:', payload);
+        if (payload.payload.presentationType === presentationType) {
+          setCurrentSlide(payload.payload.slide);
+        }
       })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [liveSessionId, isController]);
+  }, [liveSessionId, isController, presentationType]);
 
   const handleSlideChange = async (newSlide: number) => {
     if (!isController) return;

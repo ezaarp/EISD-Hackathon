@@ -35,6 +35,7 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
   const [currentStage, setCurrentStage] = useState<StageType | null>(
     session.stages.length > 0 ? session.stages[session.stages.length - 1].type : null
   );
+  const [stageIndex, setStageIndex] = useState(session.currentStageIndex || 0);
   const [stageData, setStageData] = useState<any>(
     session.stages.length > 0 ? session.stages[session.stages.length - 1] : null
   );
@@ -70,14 +71,22 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
   useEffect(() => {
     const channel = supabase.channel(`live-${liveSessionId}`)
       .on('broadcast', { event: 'stage_change' }, (payload) => {
-        console.log('Stage Update:', payload);
-        setCurrentStage(payload.payload.stage);
+        console.log('[StudentLiveClient] Stage change broadcast received:', payload);
+        const newStage = payload.payload.stage;
+        const newIndex = payload.payload.index;
+
+        console.log('[StudentLiveClient] Updating to stage:', newStage, 'index:', newIndex);
+
+        // Update all stage-related state
+        setCurrentStage(newStage);
+        setStageIndex(newIndex);
         setStageData({
-            type: payload.payload.stage,
+            type: newStage,
             startedAt: payload.payload.startedAt,
             durationSec: payload.payload.duration
         });
-        // Reset state on stage change
+
+        // Reset all submission-related state
         setMcqAnswers({});
         setCodeAnswer('');
         setLastAutosave(null);
@@ -86,8 +95,16 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
         setHasSubmitted(false);
         setShowSubmissionSuccess(false);
         setSubmissionType(null);
+        setShowUploadModal(false);
+
+        console.log('[StudentLiveClient] Stage state updated successfully');
+      })
+      .on('broadcast', { event: 'session_start' }, (payload) => {
+        console.log('[StudentLiveClient] Session started');
+        setStatus('ACTIVE');
       })
       .on('broadcast', { event: 'session_end' }, (payload) => {
+        console.log('[StudentLiveClient] Session ended');
         setStatus('COMPLETED');
       })
       .on('postgres_changes', { 
@@ -261,7 +278,7 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
   const isTimedStage = ['PRETEST', 'JURNAL', 'POSTTEST'].includes(currentStage);
 
   return (
-    <div className="space-y-6">
+    <div key={`stage-${currentStage}-${stageIndex}`} className="space-y-6">
         {/* Timer Bar - Visible to all during timed stages */}
         {isTimedStage && endTime && (
              <div className="sticky top-20 z-40 bg-slate-900/90 backdrop-blur border-b-4 border-rose-500 p-4 flex justify-between items-center mb-8 pixel-shadow">

@@ -40,7 +40,12 @@ export default async function GradingPage() {
   const submissions = await prisma.submission.findMany({
     where: {
       studentId: { in: studentIds },
-      status: { in: ['SUBMITTED', 'AUTOSUBMITTED', 'GRADED'] }
+      status: { in: ['SUBMITTED', 'AUTOSUBMITTED', 'GRADED'] },
+      OR: [
+        { contentText: { not: null } },  // Has code answer
+        { answersJson: { not: null } },  // Has MCQ answer
+        { questionId: { not: null } }    // Linked to a question
+      ]
     },
     include: {
       student: true,

@@ -31,7 +31,8 @@ export async function updateGrade(submissionId: string, score: number, notes: st
                 submissionId,
                 score,
                 notes,
-                status: 'PENDING'
+                status: 'PENDING',
+                breakdownJson: null
             }
         });
     }

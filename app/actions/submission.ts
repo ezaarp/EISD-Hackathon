@@ -126,15 +126,29 @@ export async function uploadEvidence(formData: FormData) {
         upsert: true
     });
 
-    // Try to find existing code submission first (with questionId)
-    const codeSubmission = await prisma.submission.findFirst({
+    // Try to find existing code submission first
+    // Priority 1: Find by liveSessionId and questionId (most specific)
+    let codeSubmission = liveSessionId ? await prisma.submission.findFirst({
         where: {
             taskId,
             studentId: session.user.id,
+            liveSessionId,
             questionId: { not: null }
         },
         orderBy: { createdAt: 'desc' }
-    });
+    }) : null;
+
+    // Priority 2: Find any submission with questionId for this task
+    if (!codeSubmission) {
+        codeSubmission = await prisma.submission.findFirst({
+            where: {
+                taskId,
+                studentId: session.user.id,
+                questionId: { not: null }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+    }
 
     if (codeSubmission) {
         // Attach PDF to existing code submission
@@ -142,35 +156,24 @@ export async function uploadEvidence(formData: FormData) {
             where: { id: codeSubmission.id },
             data: {
                 evidencePdfPath: storagePath,
-                liveSessionId: liveSessionId || codeSubmission.liveSessionId
+                liveSessionId: liveSessionId || codeSubmission.liveSessionId,
+                status: 'SUBMITTED',
+                submittedAt: codeSubmission.submittedAt || new Date()
             }
         });
     } else {
-        // No code submission yet, create standalone evidence submission
-        let submission = await prisma.submission.findFirst({
-            where: {
+        // No code submission found - this shouldn't normally happen for JURNAL tasks
+        // Create minimal submission with just the PDF
+        await prisma.submission.create({
+            data: {
                 taskId,
-                questionId: null,
-                studentId: session.user.id
+                studentId: session.user.id,
+                liveSessionId,
+                evidencePdfPath: storagePath,
+                status: 'SUBMITTED',
+                submittedAt: new Date()
             }
         });
-
-        if (submission) {
-            await prisma.submission.update({
-                where: { id: submission.id },
-                data: { evidencePdfPath: storagePath, liveSessionId }
-            });
-        } else {
-            await prisma.submission.create({
-                data: {
-                    taskId,
-                    studentId: session.user.id,
-                    liveSessionId,
-                    evidencePdfPath: storagePath,
-                    status: 'SUBMITTED'
-                }
-            });
-        }
     }
 
     revalidatePath('/dashboard/asisten/grading');
