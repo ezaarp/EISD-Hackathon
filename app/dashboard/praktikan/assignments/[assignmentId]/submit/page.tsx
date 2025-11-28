@@ -8,6 +8,31 @@ import { prisma } from '@/lib/prisma';
 import { ArrowLeft, Upload, FileText, AlertCircle, Download } from 'lucide-react';
 import { getFileUrl } from '@/lib/supabase';
 
+// Helper function to safely parse JSON
+function safeParseJSON(jsonString: string | null): string[] {
+  if (!jsonString) return [];
+
+  try {
+    const parsed = JSON.parse(jsonString);
+    // Ensure it's an array
+    if (Array.isArray(parsed)) {
+      return parsed;
+    }
+    // If it's a string, try to split it or return as single item
+    if (typeof parsed === 'string') {
+      return [parsed];
+    }
+    return [];
+  } catch (error) {
+    console.error('Error parsing JSON:', error, 'Value:', jsonString);
+    // If parsing fails, try to return as single item if it's a string
+    if (typeof jsonString === 'string' && jsonString.length > 0) {
+      return [jsonString];
+    }
+    return [];
+  }
+}
+
 export default async function TPSubmitPage(props: { params: Promise<{ assignmentId: string }> }) {
   const params = await props.params;
   const session = await getServerSession(authOptions);
@@ -156,13 +181,13 @@ export default async function TPSubmitPage(props: { params: Promise<{ assignment
                     
                     {q.type === 'MCQ' && q.optionsJson && (
                       <div className="space-y-2">
-                        {JSON.parse(q.optionsJson).map((opt: string, optIdx: number) => (
-                          <label 
+                        {safeParseJSON(q.optionsJson).map((opt: string, optIdx: number) => (
+                          <label
                             key={optIdx}
                             className="flex items-center gap-3 p-3 border border-slate-600 hover:bg-slate-700 cursor-pointer transition-colors"
                           >
-                            <input 
-                              type="radio" 
+                            <input
+                              type="radio"
                               name={`question_${q.id}`}
                               value={optIdx}
                               required

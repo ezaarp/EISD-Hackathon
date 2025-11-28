@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx prisma db push:*)",
+      "Bash(npx prisma generate:*)",
+      "Bash(taskkill:*)",
+      "Bash(exit 0)",
+      "Bash(if exist .next rmdir /s /q .next)",
+      "Bash(npm run db:generate:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

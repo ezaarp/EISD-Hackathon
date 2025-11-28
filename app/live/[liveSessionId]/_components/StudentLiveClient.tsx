@@ -2,12 +2,34 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { PixelCard, PixelButton } from '@/components/ui'; 
+import { PixelCard, PixelButton } from '@/components/ui';
 import { StageType } from '@prisma/client';
 import { Clock, AlertCircle, CheckCircle, FileText, Save, Users, Upload, X, Hand, Presentation } from 'lucide-react';
 import { submitMCQ, submitCode, uploadEvidence } from '@/app/actions/submission';
 import PresentationViewer from '@/components/ui/PresentationViewer';
 import { getFileUrl } from '@/lib/supabase';
+
+// Helper function to safely parse JSON
+function safeParseJSON(jsonString: string | null): string[] {
+  if (!jsonString) return [];
+
+  try {
+    const parsed = JSON.parse(jsonString);
+    if (Array.isArray(parsed)) {
+      return parsed;
+    }
+    if (typeof parsed === 'string') {
+      return [parsed];
+    }
+    return [];
+  } catch (error) {
+    console.error('Error parsing options JSON:', error);
+    if (typeof jsonString === 'string' && jsonString.length > 0) {
+      return [jsonString];
+    }
+    return [];
+  }
+}
 
 export default function StudentLiveClient({ session, liveSessionId, userId }: { session: any, liveSessionId: string, userId: string }) {
   const [currentStage, setCurrentStage] = useState<StageType | null>(
@@ -383,13 +405,13 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
                             <div key={q.id} className="p-4 border-2 border-slate-700 bg-slate-800">
                                 <p className="font-bold mb-4">{idx + 1}. {q.prompt}</p>
                                 <div className="space-y-2">
-                                    {q.optionsJson && JSON.parse(q.optionsJson).map((opt: string, optIdx: number) => (
-                                        <div 
-                                            key={optIdx} 
+                                    {safeParseJSON(q.optionsJson).map((opt: string, optIdx: number) => (
+                                        <div
+                                            key={optIdx}
                                             onClick={() => setMcqAnswers(prev => ({...prev, [q.id]: optIdx.toString()}))}
                                             className={`p-3 border cursor-pointer transition-colors ${
-                                                mcqAnswers[q.id] === optIdx.toString() 
-                                                ? 'bg-indigo-600 border-indigo-400 text-white' 
+                                                mcqAnswers[q.id] === optIdx.toString()
+                                                ? 'bg-indigo-600 border-indigo-400 text-white'
                                                 : 'border-slate-600 hover:bg-slate-700 text-slate-300'
                                             }`}
                                         >
@@ -520,13 +542,13 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
                             <div key={q.id} className="p-4 border-2 border-slate-700 bg-slate-800">
                                 <p className="font-bold mb-4">{idx + 1}. {q.prompt}</p>
                                 <div className="space-y-2">
-                                    {q.optionsJson && JSON.parse(q.optionsJson).map((opt: string, optIdx: number) => (
-                                        <div 
-                                            key={optIdx} 
+                                    {safeParseJSON(q.optionsJson).map((opt: string, optIdx: number) => (
+                                        <div
+                                            key={optIdx}
                                             onClick={() => setMcqAnswers(prev => ({...prev, [q.id]: optIdx.toString()}))}
                                             className={`p-3 border cursor-pointer transition-colors ${
-                                                mcqAnswers[q.id] === optIdx.toString() 
-                                                ? 'bg-indigo-600 border-indigo-400 text-white' 
+                                                mcqAnswers[q.id] === optIdx.toString()
+                                                ? 'bg-indigo-600 border-indigo-400 text-white'
                                                 : 'border-slate-600 hover:bg-slate-700 text-slate-300'
                                             }`}
                                         >
