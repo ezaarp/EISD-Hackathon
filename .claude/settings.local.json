@@ -6,7 +6,8 @@
       "Bash(taskkill:*)",
       "Bash(exit 0)",
       "Bash(if exist .next rmdir /s /q .next)",
-      "Bash(npm run db:generate:*)"
+      "Bash(npm run db:generate:*)",
+      "Bash(if exist node_modules.prisma rmdir /s /q node_modules.prisma)"
     ],
     "deny": [],
     "ask": []

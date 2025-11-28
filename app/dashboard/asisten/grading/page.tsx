@@ -37,15 +37,10 @@ export default async function GradingPage() {
     p.studentAssignments.map((sa) => sa.studentId)
   );
 
-  const submissions = await prisma.submission.findMany({
+  const allSubmissions = await prisma.submission.findMany({
     where: {
       studentId: { in: studentIds },
-      status: { in: ['SUBMITTED', 'AUTOSUBMITTED', 'GRADED'] },
-      OR: [
-        { contentText: { not: null } },  // Has code answer
-        { answersJson: { not: null } },  // Has MCQ answer
-        { questionId: { not: null } }    // Linked to a question
-      ]
+      status: { in: ['SUBMITTED', 'AUTOSUBMITTED', 'GRADED'] }
     },
     include: {
       student: true,
@@ -65,10 +60,36 @@ export default async function GradingPage() {
     ],
   });
 
+  // Deduplicate submissions: keep most complete submission per student per task
+  const submissionMap = new Map();
+
+  for (const sub of allSubmissions) {
+    const key = `${sub.taskId}_${sub.studentId}`;
+    const existing = submissionMap.get(key);
+
+    // Scoring: prefer submissions with more content
+    const score = (sub: typeof allSubmissions[0]) => {
+      let s = 0;
+      if (sub.contentText) s += 10;
+      if (sub.answersJson) s += 10;
+      if (sub.evidencePdfPath) s += 5;
+      if (sub.questionId) s += 1;
+      return s;
+    };
+
+    if (!existing || score(sub) > score(existing)) {
+      submissionMap.set(key, sub);
+    }
+  }
+
+  const submissions = Array.from(submissionMap.values()).sort((a, b) =>
+    (b.submittedAt?.getTime() || 0) - (a.submittedAt?.getTime() || 0)
+  );
+
   const pendingSubmissions = submissions.filter(
     (s) => !s.grade || s.grade.status === 'PENDING'
   );
-  
+
   const gradedSubmissions = submissions.filter(
     (s) => s.grade && (s.grade.status === 'APPROVED' || s.grade.status === 'REJECTED')
   );

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { PixelCard, PixelButton } from '@/components/ui';
 import { StageType } from '@prisma/client';
@@ -32,6 +33,7 @@ function safeParseJSON(jsonString: string | null): string[] {
 }
 
 export default function StudentLiveClient({ session, liveSessionId, userId }: { session: any, liveSessionId: string, userId: string }) {
+  const router = useRouter();
   const [currentStage, setCurrentStage] = useState<StageType | null>(
     session.stages.length > 0 ? session.stages[session.stages.length - 1].type : null
   );
@@ -69,6 +71,9 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
   const [attendanceMarked, setAttendanceMarked] = useState(false);
 
   useEffect(() => {
+    // Don't subscribe if session is already completed
+    if (status === 'COMPLETED') return;
+
     const channel = supabase.channel(`live-${liveSessionId}`)
       .on('broadcast', { event: 'stage_change' }, (payload) => {
         console.log('[StudentLiveClient] Stage change broadcast received:', payload);
@@ -107,11 +112,11 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
         console.log('[StudentLiveClient] Session ended');
         setStatus('COMPLETED');
       })
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
         table: 'Attendance',
-        filter: `studentId=eq.${userId}` 
+        filter: `studentId=eq.${userId}`
       }, (payload) => {
         console.log('Attendance marked:', payload);
         setAttendanceMarked(true);
@@ -121,7 +126,7 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [liveSessionId, userId]);
+  }, [liveSessionId, userId, status]);
 
   // Autosave for Code
   useEffect(() => {
@@ -246,7 +251,11 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
         <PixelCard className="text-center py-20">
             <h1 className="text-3xl font-pixel text-emerald-400 mb-4">SESSION COMPLETED</h1>
             <p>Thank you for attending today's practical session.</p>
-            <PixelButton href="/dashboard/praktikan" variant="primary" className="mt-8 inline-block">
+            <PixelButton
+                onClick={() => router.push('/dashboard/praktikan')}
+                variant="primary"
+                className="mt-8 inline-block"
+            >
                 Back to Dashboard
             </PixelButton>
         </PixelCard>
