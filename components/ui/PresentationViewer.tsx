@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { PixelButton } from './PixelButton';
+import PixelButton from './PixelButton';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface PresentationViewerProps {
