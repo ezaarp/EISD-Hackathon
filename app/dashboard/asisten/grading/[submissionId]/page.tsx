@@ -6,6 +6,7 @@ import { PixelCard, PixelButton } from '@/components/ui';
 import { prisma } from '@/lib/prisma';
 import { ArrowLeft, FileText, Download } from 'lucide-react';
 import { getFileUrl } from '@/lib/supabase';
+import GradingForm from './_components/GradingForm';
 
 export default async function SubmissionDetailPage(props: { params: Promise<{ submissionId: string }> }) {
   const params = await props.params;
@@ -168,63 +169,7 @@ export default async function SubmissionDetailPage(props: { params: Promise<{ su
 
         {/* Sidebar - Grading Panel */}
         <div className="space-y-6">
-          <PixelCard title="GRADING">
-            <div className="space-y-4">
-              {submission.grade && (
-                <>
-                  <div className="bg-slate-800 border border-slate-700 p-4 text-center">
-                    <p className="text-xs text-slate-400 mb-2">AI Recommended Score</p>
-                    <p className="text-4xl font-pixel text-indigo-400">{submission.grade.score}</p>
-                  </div>
-
-                  {submission.grade.breakdownJson && (
-                    <div className="bg-slate-900 border border-slate-700 p-3">
-                      <p className="text-xs text-slate-400 mb-2">Breakdown</p>
-                      <pre className="text-xs text-slate-300 overflow-x-auto">
-                        {JSON.stringify(JSON.parse(submission.grade.breakdownJson), null, 2)}
-                      </pre>
-                    </div>
-                  )}
-
-                  <div className="pt-4 border-t border-slate-700">
-                    <label className="block text-xs text-slate-400 mb-2">Final Score</label>
-                    <input 
-                      type="number" 
-                      defaultValue={submission.grade.score}
-                      className="w-full bg-black border border-slate-600 p-3 text-white text-center text-2xl font-bold"
-                      min="0"
-                      max="100"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs text-slate-400 mb-2">Comments</label>
-                    <textarea 
-                      className="w-full bg-black border border-slate-600 p-3 text-white min-h-[100px]"
-                      placeholder="Add feedback for the student..."
-                      defaultValue={submission.grade.notes || ''}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <PixelButton variant="success" className="w-full">
-                      APPROVE
-                    </PixelButton>
-                    <PixelButton variant="danger" className="w-full">
-                      REJECT
-                    </PixelButton>
-                  </div>
-                </>
-              )}
-
-              {!submission.grade && (
-                <div className="text-center py-8 text-slate-500">
-                  <p>No AI grading available yet</p>
-                  <p className="text-xs mt-2">Manual grading required</p>
-                </div>
-              )}
-            </div>
-          </PixelCard>
+          <GradingForm submission={submission} />
 
           <PixelCard title="SUBMISSION INFO">
             <div className="space-y-3 text-sm">

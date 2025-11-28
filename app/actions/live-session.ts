@@ -217,6 +217,63 @@ export async function changeStage(sessionId: string, stageType: StageType, durat
     return { success: true };
 }
 
+export async function backStage(sessionId: string) {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== 'PUBLIKASI') {
+        throw new Error('Unauthorized');
+    }
+
+    const liveSession = await prisma.liveSession.findUnique({
+        where: { id: sessionId },
+        include: { stages: { orderBy: { stageOrder: 'desc' } } }
+    });
+
+    if (!liveSession || liveSession.currentStageIndex <= 0) {
+        throw new Error('Cannot go back from first stage');
+    }
+
+    // End current stage
+    const currentStage = liveSession.stages[0];
+    if (currentStage && !currentStage.endedAt) {
+        await prisma.liveStage.update({
+            where: { id: currentStage.id },
+            data: { endedAt: new Date() }
+        });
+    }
+
+    // Go back one index
+    const prevIndex = liveSession.currentStageIndex - 1;
+    const prevStage = liveSession.stages.find(s => s.stageOrder === prevIndex);
+
+    if (!prevStage) {
+        throw new Error('Previous stage not found');
+    }
+
+    // Reopen previous stage
+    await prisma.liveStage.update({
+        where: { id: prevStage.id },
+        data: { 
+            endedAt: null,
+            startedAt: new Date() // Restart timer
+        }
+    });
+
+    await prisma.liveSession.update({
+        where: { id: sessionId },
+        data: { currentStageIndex: prevIndex }
+    });
+
+    await broadcastLiveEvent(sessionId, 'stage_change', {
+        stage: prevStage.type,
+        index: prevIndex,
+        duration: prevStage.durationSec,
+        startedAt: new Date()
+    });
+
+    revalidatePath(`/live/${sessionId}`);
+    return { success: true };
+}
+
 export async function endLiveSession(sessionId: string) {
     const session = await getServerSession(authOptions);
     if (!session || !['PUBLIKASI'].includes(session.user.role)) {

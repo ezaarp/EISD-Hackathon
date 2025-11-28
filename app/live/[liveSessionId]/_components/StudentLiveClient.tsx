@@ -29,6 +29,7 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
   // Quiz Result State
   const [showQuizResult, setShowQuizResult] = useState(false);
   const [quizResult, setQuizResult] = useState<{score: number, total: number, timeRemaining: string} | null>(null);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
 
   // Feedback State
   const [feedbackRating, setFeedbackRating] = useState(0);
@@ -54,6 +55,7 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
         setLastAutosave(null);
         setShowQuizResult(false);
         setQuizResult(null);
+        setHasSubmitted(false);
       })
       .on('broadcast', { event: 'session_end' }, (payload) => {
         setStatus('COMPLETED');
@@ -116,6 +118,9 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
           const timeLeft = Math.max(0, Math.floor((endTime.getTime() - now.getTime()) / 1000));
           const minutes = Math.floor(timeLeft / 60);
           const seconds = timeLeft % 60;
+          
+          // Lock submission
+          setHasSubmitted(true);
           
           // Show result modal
           setQuizResult({
@@ -260,17 +265,10 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
             </div>
         )}
 
-        {/* Quiz Result Modal */}
+        {/* Quiz Result Modal - LOCKED, cannot close */}
         {showQuizResult && quizResult && (
             <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
                 <div className="bg-slate-900 border-4 border-emerald-500 w-full max-w-lg p-8 relative text-center">
-                    <button 
-                        onClick={() => setShowQuizResult(false)}
-                        className="absolute top-4 right-4 text-slate-400 hover:text-white"
-                    >
-                        <X size={24} />
-                    </button>
-                    
                     <CheckCircle size={64} className="mx-auto text-emerald-400 mb-4" />
                     <h2 className="text-3xl font-pixel text-emerald-400 mb-4">SELAMAT!</h2>
                     <p className="text-xl text-white mb-6">Telah berhasil menyelesaikan quiz</p>
@@ -287,21 +285,39 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
                         Time Remaining: <span className="text-emerald-400 font-bold">{quizResult.timeRemaining}</span>
                     </div>
                     
-                    <PixelButton variant="primary" onClick={() => setShowQuizResult(false)}>
-                        CLOSE
-                    </PixelButton>
+                    <p className="text-xs text-slate-500">Mohon tunggu asisten untuk melanjutkan ke stage berikutnya</p>
                 </div>
             </div>
         )}
 
-        {/* Waiting for Next Quiz */}
-        {(currentStage === 'TP_REVIEW' || currentStage === 'JURNAL_REVIEW') && (
+        {/* Waiting for Next Quiz / Review Stage */}
+        {currentStage === 'TP_REVIEW' && (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
+                <div className="text-center max-w-2xl">
+                    <Users size={64} className="mx-auto text-amber-400 mb-6 animate-pulse" />
+                    <h1 className="text-4xl font-pixel text-white mb-4">PEMBAHASAN MATERI</h1>
+                    <div className="bg-slate-800 border-2 border-slate-700 p-6 mb-6">
+                        <p className="text-xl text-slate-300 mb-4">
+                            Perhatikan materi yang disampaikan
+                        </p>
+                        <p className="text-lg text-amber-400">
+                            oleh Asisten Praktikum
+                        </p>
+                    </div>
+                    <div className="flex justify-center gap-2">
+                        <div className="w-3 h-3 bg-amber-500 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
+                        <div className="w-3 h-3 bg-amber-500 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
+                        <div className="w-3 h-3 bg-amber-500 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {currentStage === 'JURNAL_REVIEW' && (
             <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
                 <div className="text-center max-w-2xl">
                     <Clock size={64} className="mx-auto text-indigo-400 mb-6 animate-pulse" />
-                    <h1 className="text-4xl font-pixel text-white mb-4">
-                        {currentStage === 'TP_REVIEW' ? 'PRE-TEST' : 'POST-TEST'}
-                    </h1>
+                    <h1 className="text-4xl font-pixel text-white mb-4">POST-TEST</h1>
                     <div className="bg-slate-800 border-2 border-slate-700 p-6 mb-6">
                         <p className="text-xl text-slate-300 mb-4">
                             Quiz akan dimulai sebentar lagi
@@ -319,7 +335,7 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
             </div>
         )}
 
-        {currentStage === 'PRETEST' && pretestTask && (
+        {currentStage === 'PRETEST' && pretestTask && !hasSubmitted && (
              <div className="space-y-6">
                 <PixelCard title={`PRE-TEST: ${pretestTask.title}`}>
                     <p className="mb-4 text-slate-300" dangerouslySetInnerHTML={{__html: pretestTask.instructions}} />
@@ -457,7 +473,7 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
              </div>
         )}
 
-        {currentStage === 'POSTTEST' && posttestTask && (
+        {currentStage === 'POSTTEST' && posttestTask && !hasSubmitted && (
             <div className="space-y-6">
                 <PixelCard title={`POST-TEST: ${posttestTask.title}`}>
                      <p className="mb-4 text-slate-300" dangerouslySetInnerHTML={{__html: posttestTask.instructions}} />

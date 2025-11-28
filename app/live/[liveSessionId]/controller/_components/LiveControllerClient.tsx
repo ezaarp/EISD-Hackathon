@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { PixelButton, PixelCard } from '@/components/ui';
-import { Play, Square, SkipForward, Users, Clock } from 'lucide-react';
+import { Play, Square, SkipForward, SkipBack, Users, Clock } from 'lucide-react';
 import { StageType } from '@prisma/client';
-import { startLiveSession, changeStage, endLiveSession } from '@/app/actions/live-session';
+import { startLiveSession, changeStage, endLiveSession, backStage } from '@/app/actions/live-session';
 
 const STAGES: StageType[] = [
   'OPENING',
@@ -110,6 +110,21 @@ export default function LiveControllerClient({ session, liveSessionId }: { sessi
     }
   };
 
+  const handleBackStage = async () => {
+    if (stageIndex <= 0) return;
+    if (!confirm('Go back to previous stage? This will restart its timer.')) return;
+
+    setIsLoading(true);
+    try {
+      await backStage(liveSessionId);
+    } catch (error: any) {
+      console.error(error);
+      alert('Failed to go back: ' + error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleEndSession = async () => {
     if (!confirm('Are you sure you want to END the session?')) return;
     
@@ -168,8 +183,8 @@ export default function LiveControllerClient({ session, liveSessionId }: { sessi
                 )}
               </div>
 
-              {/* Controls */}
-              <div className="grid grid-cols-2 gap-4 w-full max-w-md">
+            {/* Controls */}
+            <div className="grid grid-cols-2 gap-4 w-full max-w-lg">
                 {status === 'DRAFT' ? (
                   <PixelButton 
                     variant="success" 
@@ -180,27 +195,37 @@ export default function LiveControllerClient({ session, liveSessionId }: { sessi
                     <Play size={24} className="mr-2" />
                     START SESSION
                   </PixelButton>
-                ) : (
-                  <>
-                    <PixelButton 
-                      variant="warning"
-                      onClick={handleNextStage}
-                      disabled={isLoading || status === 'COMPLETED'}
-                    >
-                      <SkipForward size={20} className="mr-2" />
-                      NEXT STAGE
-                    </PixelButton>
-                    
-                    <PixelButton 
-                      variant="danger"
-                      onClick={handleEndSession}
-                      disabled={isLoading || status === 'COMPLETED'}
-                    >
-                      <Square size={20} className="mr-2" />
-                      END SESSION
-                    </PixelButton>
-                  </>
-                )}
+              ) : (
+                <>
+                  <PixelButton 
+                    variant="outline"
+                    onClick={handleBackStage}
+                    disabled={isLoading || status === 'COMPLETED' || stageIndex === 0}
+                  >
+                    <SkipBack size={20} className="mr-2" />
+                    BACK
+                  </PixelButton>
+
+                  <PixelButton 
+                    variant="warning"
+                    onClick={handleNextStage}
+                    disabled={isLoading || status === 'COMPLETED'}
+                  >
+                    <SkipForward size={20} className="mr-2" />
+                    NEXT
+                  </PixelButton>
+                  
+                  <PixelButton 
+                    variant="danger"
+                    onClick={handleEndSession}
+                    disabled={isLoading || status === 'COMPLETED'}
+                    className="col-span-2"
+                  >
+                    <Square size={20} className="mr-2" />
+                    END SESSION
+                  </PixelButton>
+                </>
+              )}
               </div>
 
               {/* Stage Progress */}
