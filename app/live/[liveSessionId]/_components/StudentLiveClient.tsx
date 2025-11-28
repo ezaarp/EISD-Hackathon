@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { PixelCard, PixelButton, Timer } from '@/components/ui'; 
+import { PixelCard, PixelButton } from '@/components/ui'; 
 import { StageType } from '@prisma/client';
-import { Clock, AlertCircle, CheckCircle, FileText, Save, Users, Upload, X } from 'lucide-react';
+import { Clock, AlertCircle, CheckCircle, FileText, Save, Users, Upload, X, Hand } from 'lucide-react';
 import { submitMCQ, submitCode, uploadEvidence } from '@/app/actions/submission';
 
 export default function StudentLiveClient({ session, liveSessionId, userId }: { session: any, liveSessionId: string, userId: string }) {
@@ -26,6 +26,18 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
+  // Quiz Result State
+  const [showQuizResult, setShowQuizResult] = useState(false);
+  const [quizResult, setQuizResult] = useState<{score: number, total: number, timeRemaining: string} | null>(null);
+
+  // Feedback State
+  const [feedbackRating, setFeedbackRating] = useState(0);
+  const [feedbackComment, setFeedbackComment] = useState('');
+  const [showFeedbackThankYou, setShowFeedbackThankYou] = useState(false);
+
+  // Attendance State
+  const [attendanceMarked, setAttendanceMarked] = useState(false);
+
   useEffect(() => {
     const channel = supabase.channel(`live-${liveSessionId}`)
       .on('broadcast', { event: 'stage_change' }, (payload) => {
@@ -40,16 +52,27 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
         setMcqAnswers({});
         setCodeAnswer('');
         setLastAutosave(null);
+        setShowQuizResult(false);
+        setQuizResult(null);
       })
       .on('broadcast', { event: 'session_end' }, (payload) => {
         setStatus('COMPLETED');
+      })
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'Attendance',
+        filter: `studentId=eq.${userId}` 
+      }, (payload) => {
+        console.log('Attendance marked:', payload);
+        setAttendanceMarked(true);
       })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [liveSessionId]);
+  }, [liveSessionId, userId]);
 
   // Autosave for Code
   useEffect(() => {
@@ -57,8 +80,7 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
 
       const timeout = setTimeout(async () => {
           try {
-            // Retrieve current task ID for Jurnal
-            const task = session.moduleWeek.tasks.find((t: any) => t.type === 'JURNAL');
+            const task = session.moduleWeek.tasks.find((t: any) => t.type.toUpperCase() === 'JURNAL');
             const question = task?.questions[0];
             if (task && question) {
                 await fetch('/api/autosave', {
@@ -75,19 +97,35 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
           } catch (e) {
               console.error("Autosave failed", e);
           }
-      }, 2000); // Debounce 2s
+      }, 2000);
 
       return () => clearTimeout(timeout);
   }, [codeAnswer, currentStage, session.moduleWeek.tasks, liveSessionId]);
 
-  const handleMCQSubmit = async (taskId: string) => {
+  const handleMCQSubmit = async (taskId: string, taskType: string) => {
       if (!confirm('Submit answers? You cannot change them after submitting.')) return;
       setIsSubmitting(true);
       try {
-          await submitMCQ(taskId, mcqAnswers, liveSessionId);
-          alert('Answers submitted successfully!');
-      } catch (e) {
-          alert('Failed to submit');
+          const result = await submitMCQ(taskId, mcqAnswers, liveSessionId);
+          
+          // Calculate time remaining
+          const now = new Date();
+          const endTime = stageData?.startedAt 
+            ? new Date(new Date(stageData.startedAt).getTime() + stageData.durationSec * 1000) 
+            : now;
+          const timeLeft = Math.max(0, Math.floor((endTime.getTime() - now.getTime()) / 1000));
+          const minutes = Math.floor(timeLeft / 60);
+          const seconds = timeLeft % 60;
+          
+          // Show result modal
+          setQuizResult({
+            score: result.score || 0,
+            total: result.total || 0,
+            timeRemaining: `${minutes}:${seconds.toString().padStart(2, '0')}`
+          });
+          setShowQuizResult(true);
+      } catch (e: any) {
+          alert('Failed to submit: ' + e.message);
       } finally {
           setIsSubmitting(false);
       }
@@ -119,6 +157,35 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
       }
   };
 
+  const handleFeedbackSubmit = async () => {
+      if (feedbackRating === 0) {
+        alert('Please select a rating');
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            liveSessionId,
+            rating: feedbackRating,
+            comment: feedbackComment,
+            type: 'PRAKTIKUM'
+          })
+        });
+        
+        if (!response.ok) throw new Error('Failed to submit feedback');
+        
+        setShowFeedbackThankYou(true);
+        setTimeout(() => {
+          setShowFeedbackThankYou(false);
+        }, 3000);
+      } catch (e: any) {
+        alert('Failed to submit feedback: ' + e.message);
+      }
+  };
+
   if (status === 'COMPLETED') {
     return (
         <PixelCard className="text-center py-20">
@@ -144,9 +211,9 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
   }
 
   // Helper to find tasks
-  const pretestTask = session.moduleWeek.tasks.find((t: any) => t.type === 'PRETEST');
-  const jurnalTask = session.moduleWeek.tasks.find((t: any) => t.type === 'JURNAL');
-  const posttestTask = session.moduleWeek.tasks.find((t: any) => t.type === 'POSTTEST');
+  const pretestTask = session.moduleWeek.tasks.find((t: any) => t.type.toUpperCase() === 'PRETEST');
+  const jurnalTask = session.moduleWeek.tasks.find((t: any) => t.type.toUpperCase() === 'JURNAL');
+  const posttestTask = session.moduleWeek.tasks.find((t: any) => t.type.toUpperCase() === 'POSTTEST');
 
   // Timer Logic
   const endTime = stageData?.startedAt 
@@ -157,7 +224,7 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
 
   return (
     <div className="space-y-6">
-        {/* Timer Bar */}
+        {/* Timer Bar - Visible to all during timed stages */}
         {isTimedStage && endTime && (
              <div className="sticky top-20 z-40 bg-slate-900/90 backdrop-blur border-b-4 border-rose-500 p-4 flex justify-between items-center mb-8 pixel-shadow">
                 <div className="flex items-center gap-2">
@@ -166,6 +233,88 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
                 </div>
                 <div className="font-pixel text-2xl text-white">
                     <Countdown target={endTime} />
+                </div>
+            </div>
+        )}
+
+        {/* ABSEN STAGE - Show raise hand message */}
+        {currentStage === 'ABSEN' && (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
+                <div className={`text-center transition-all duration-500 ${attendanceMarked ? 'scale-110' : ''}`}>
+                    <div className="mb-8">
+                        <Hand size={80} className={`mx-auto ${attendanceMarked ? 'text-emerald-400' : 'text-amber-400 animate-bounce'}`} />
+                    </div>
+                    {!attendanceMarked ? (
+                        <>
+                            <h1 className="text-4xl font-pixel text-white mb-4">ATTENDANCE CHECK</h1>
+                            <p className="text-xl text-amber-400 mb-2">Ketika Nama dipanggil,</p>
+                            <p className="text-2xl font-bold text-amber-300">tolong angkat tangan! 🙋‍♂️</p>
+                        </>
+                    ) : (
+                        <>
+                            <h1 className="text-4xl font-pixel text-emerald-400 mb-4">ATTENDANCE MARKED ✓</h1>
+                            <p className="text-xl text-emerald-300">Your attendance has been recorded</p>
+                        </>
+                    )}
+                </div>
+            </div>
+        )}
+
+        {/* Quiz Result Modal */}
+        {showQuizResult && quizResult && (
+            <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
+                <div className="bg-slate-900 border-4 border-emerald-500 w-full max-w-lg p-8 relative text-center">
+                    <button 
+                        onClick={() => setShowQuizResult(false)}
+                        className="absolute top-4 right-4 text-slate-400 hover:text-white"
+                    >
+                        <X size={24} />
+                    </button>
+                    
+                    <CheckCircle size={64} className="mx-auto text-emerald-400 mb-4" />
+                    <h2 className="text-3xl font-pixel text-emerald-400 mb-4">SELAMAT!</h2>
+                    <p className="text-xl text-white mb-6">Telah berhasil menyelesaikan quiz</p>
+                    
+                    <div className="bg-slate-800 border-2 border-slate-700 p-6 mb-6">
+                        <div className="text-4xl font-pixel text-white mb-2">
+                            {quizResult.score} / {quizResult.total}
+                        </div>
+                        <p className="text-slate-400">Your Score</p>
+                    </div>
+                    
+                    <div className="text-sm text-slate-400 mb-6">
+                        <Clock size={16} className="inline mr-2" />
+                        Time Remaining: <span className="text-emerald-400 font-bold">{quizResult.timeRemaining}</span>
+                    </div>
+                    
+                    <PixelButton variant="primary" onClick={() => setShowQuizResult(false)}>
+                        CLOSE
+                    </PixelButton>
+                </div>
+            </div>
+        )}
+
+        {/* Waiting for Next Quiz */}
+        {(currentStage === 'TP_REVIEW' || currentStage === 'JURNAL_REVIEW') && (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
+                <div className="text-center max-w-2xl">
+                    <Clock size={64} className="mx-auto text-indigo-400 mb-6 animate-pulse" />
+                    <h1 className="text-4xl font-pixel text-white mb-4">
+                        {currentStage === 'TP_REVIEW' ? 'PRE-TEST' : 'POST-TEST'}
+                    </h1>
+                    <div className="bg-slate-800 border-2 border-slate-700 p-6 mb-6">
+                        <p className="text-xl text-slate-300 mb-4">
+                            Quiz akan dimulai sebentar lagi
+                        </p>
+                        <p className="text-lg text-indigo-400">
+                            Silahkan menunggu hingga asisten memulai quiz
+                        </p>
+                    </div>
+                    <div className="flex justify-center gap-2">
+                        <div className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
+                        <div className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
+                        <div className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+                    </div>
                 </div>
             </div>
         )}
@@ -199,7 +348,7 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
                         <PixelButton 
                             variant="primary" 
                             className="w-full" 
-                            onClick={() => handleMCQSubmit(pretestTask.id)}
+                            onClick={() => handleMCQSubmit(pretestTask.id, 'PRETEST')}
                             disabled={isSubmitting}
                         >
                             {isSubmitting ? 'SUBMITTING...' : 'SUBMIT PRE-TEST'}
@@ -312,7 +461,6 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
             <div className="space-y-6">
                 <PixelCard title={`POST-TEST: ${posttestTask.title}`}>
                      <p className="mb-4 text-slate-300" dangerouslySetInnerHTML={{__html: posttestTask.instructions}} />
-                     {/* Same MCQ Render Logic */}
                      <div className="space-y-6">
                         {posttestTask.questions.map((q: any, idx: number) => (
                             <div key={q.id} className="p-4 border-2 border-slate-700 bg-slate-800">
@@ -337,7 +485,7 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
                         <PixelButton 
                             variant="primary" 
                             className="w-full" 
-                            onClick={() => handleMCQSubmit(posttestTask.id)}
+                            onClick={() => handleMCQSubmit(posttestTask.id, 'POSTTEST')}
                             disabled={isSubmitting}
                         >
                             {isSubmitting ? 'SUBMITTING...' : 'SUBMIT POST-TEST'}
@@ -349,24 +497,41 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
 
         {currentStage === 'FEEDBACK' && (
             <PixelCard title="FEEDBACK" className="max-w-2xl mx-auto">
-                <div className="text-center space-y-6">
-                    <h2 className="text-xl">Rate this Session</h2>
-                    <div className="flex justify-center gap-2">
-                        {[1,2,3,4,5].map(star => (
-                            <button key={star} className="text-3xl hover:scale-125 transition-transform">⭐</button>
-                        ))}
+                {!showFeedbackThankYou ? (
+                    <div className="text-center space-y-6">
+                        <h2 className="text-xl font-bold text-white">Rate this Session</h2>
+                        <div className="flex justify-center gap-2">
+                            {[1,2,3,4,5].map(star => (
+                                <button 
+                                    key={star} 
+                                    onClick={() => setFeedbackRating(star)}
+                                    className={`text-4xl transition-all hover:scale-125 ${feedbackRating >= star ? 'opacity-100' : 'opacity-30'}`}
+                                >
+                                    ⭐
+                                </button>
+                            ))}
+                        </div>
+                        <textarea 
+                            className="w-full bg-slate-800 border border-slate-600 p-3 text-white min-h-[120px]" 
+                            placeholder="Any comments or suggestions?"
+                            value={feedbackComment}
+                            onChange={(e) => setFeedbackComment(e.target.value)}
+                        ></textarea>
+                        <PixelButton variant="primary" onClick={handleFeedbackSubmit}>
+                            SEND FEEDBACK
+                        </PixelButton>
                     </div>
-                    <textarea className="w-full bg-slate-800 border border-slate-600 p-3" placeholder="Any comments?"></textarea>
-                    <PixelButton variant="primary">SEND FEEDBACK</PixelButton>
-                </div>
+                ) : (
+                    <div className="text-center py-12 space-y-4">
+                        <CheckCircle size={64} className="mx-auto text-emerald-400" />
+                        <h2 className="text-2xl font-pixel text-emerald-400">TERIMA KASIH!</h2>
+                        <p className="text-lg text-slate-300">Telah mengisi feedback</p>
+                    </div>
+                )}
             </PixelCard>
         )}
     </div>
   );
-}
-
-function UsersIcon(props: any) {
-    return <Users size={24} {...props} />;
 }
 
 function Countdown({ target }: { target: Date }) {

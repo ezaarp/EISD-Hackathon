@@ -435,6 +435,7 @@ model LiveSession {
   submissions     Submission[]
   violations      Violation[]
   penalties       Penalty[]
+  ratings         Rating[]
 
   @@index([shiftId])
   @@index([moduleWeekId])
@@ -734,11 +735,15 @@ model Rating {
   stars     Int        // 1-5
   comment   String?    @db.Text
 
+  liveSessionId String? // Link to live session if applicable
+  liveSession   LiveSession? @relation(fields: [liveSessionId], references: [id])
+
   createdAt DateTime   @default(now())
 
   @@index([type])
   @@index([targetId])
   @@index([studentId])
+  @@index([liveSessionId])
 }
 
 model Media {

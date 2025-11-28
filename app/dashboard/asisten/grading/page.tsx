@@ -9,7 +9,7 @@ const navItems = [
   { href: '/dashboard/asisten', label: 'Dashboard', icon: 'Home' },
   { href: '/dashboard/asisten/students', label: 'Students', icon: 'Users' },
   { href: '/dashboard/asisten/grading', label: 'Grading', icon: 'FileText' },
-  { href: '/dashboard/asisten/ratings', label: 'Ratings', icon: 'Award' },
+  { href: '/dashboard/asisten/feedback', label: 'Feedback', icon: 'MessageSquare' },
 ];
 
 export default async function GradingPage() {

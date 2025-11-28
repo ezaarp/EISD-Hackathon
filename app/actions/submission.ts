@@ -61,7 +61,16 @@ export async function submitMCQ(taskId: string, answers: Record<string, string>,
       }
   }
 
-  return { success: true };
+  // Calculate percentage score
+  const finalScore = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+
+  return { 
+    success: true, 
+    score: finalScore, 
+    total: 100,
+    pointsEarned: totalScore,
+    maxPoints: maxScore
+  };
 }
 
 export async function submitCode(taskId: string, questionId: string, code: string, liveSessionId?: string) {
