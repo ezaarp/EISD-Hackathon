@@ -5,7 +5,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { PixelCard, PixelButton } from '@/components/ui';
 import { createLiveSession } from '@/app/actions/live-session';
 import { redirect } from 'next/navigation';
-import { Play, Calendar, Clock } from 'lucide-react';
+import { Play, Calendar, Clock, Edit } from 'lucide-react';
 
 async function startSession(formData: FormData) {
   'use server';
@@ -92,14 +92,20 @@ export default async function LiveSessionDashboard() {
                         <div className="mt-4 p-4 bg-indigo-900 border-2 border-indigo-500">
                           <p className="text-xs text-indigo-300 uppercase font-bold mb-2">Active Session</p>
                           <p className="font-pixel text-white mb-4">Stage: {activeSession.currentStageIndex}</p>
-                          <form action={async () => {
-                            'use server';
-                            redirect(`/live/${activeSession.id}/controller`);
-                          }}>
-                            <PixelButton type="submit" variant="primary" className="w-full">
-                              RESUME SESSION
+                          <div className="grid grid-cols-2 gap-2">
+                            <form action={async () => {
+                              'use server';
+                              redirect(`/live/${activeSession.id}/controller`);
+                            }}>
+                              <PixelButton type="submit" variant="primary" className="w-full">
+                                RESUME
+                              </PixelButton>
+                            </form>
+                            <PixelButton href={`/dashboard/publikasi/live-session/${activeSession.id}/edit`} variant="outline" className="w-full">
+                              <Edit size={16} className="mr-1" />
+                              EDIT
                             </PixelButton>
-                          </form>
+                          </div>
                         </div>
                       ) : (
                         <div className="mt-4">

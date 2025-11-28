@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { PixelCard, PixelButton } from '@/components/ui'; 
 import { StageType } from '@prisma/client';
-import { Clock, AlertCircle, CheckCircle, FileText, Save, Users, Upload, X, Hand } from 'lucide-react';
+import { Clock, AlertCircle, CheckCircle, FileText, Save, Users, Upload, X, Hand, Presentation } from 'lucide-react';
 import { submitMCQ, submitCode, uploadEvidence } from '@/app/actions/submission';
+import PresentationViewer from '@/components/ui/PresentationViewer';
+import { getFileUrl } from '@/lib/supabase';
 
 export default function StudentLiveClient({ session, liveSessionId, userId }: { session: any, liveSessionId: string, userId: string }) {
   const [currentStage, setCurrentStage] = useState<StageType | null>(
@@ -290,48 +292,53 @@ export default function StudentLiveClient({ session, liveSessionId, userId }: { 
             </div>
         )}
 
-        {/* Waiting for Next Quiz / Review Stage */}
+        {/* TP_REVIEW - Material Review with Presentation */}
         {currentStage === 'TP_REVIEW' && (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
-                <div className="text-center max-w-2xl">
-                    <Users size={64} className="mx-auto text-amber-400 mb-6 animate-pulse" />
-                    <h1 className="text-4xl font-pixel text-white mb-4">PEMBAHASAN MATERI</h1>
-                    <div className="bg-slate-800 border-2 border-slate-700 p-6 mb-6">
-                        <p className="text-xl text-slate-300 mb-4">
-                            Perhatikan materi yang disampaikan
-                        </p>
-                        <p className="text-lg text-amber-400">
-                            oleh Asisten Praktikum
-                        </p>
-                    </div>
-                    <div className="flex justify-center gap-2">
-                        <div className="w-3 h-3 bg-amber-500 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
-                        <div className="w-3 h-3 bg-amber-500 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
-                        <div className="w-3 h-3 bg-amber-500 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
-                    </div>
+            <div className="space-y-6">
+                <div className="bg-amber-900/50 border-2 border-amber-500 p-6 text-center">
+                    <Presentation size={48} className="mx-auto text-amber-400 mb-4" />
+                    <h1 className="text-3xl font-pixel text-white mb-2">PEMBAHASAN MATERI</h1>
+                    <p className="text-amber-300">Perhatikan materi yang disampaikan oleh Asisten Praktikum</p>
                 </div>
+
+                {session.presentationPath ? (
+                    <PixelCard title="PRESENTATION">
+                        <PresentationViewer 
+                            liveSessionId={liveSessionId}
+                            presentationUrl={getFileUrl('materials', session.presentationPath)}
+                            initialSlide={session.currentSlide || 1}
+                        />
+                    </PixelCard>
+                ) : (
+                    <div className="text-center py-12 text-slate-500">
+                        <p>Menunggu asisten memulai presentasi...</p>
+                    </div>
+                )}
             </div>
         )}
 
+        {/* JURNAL_REVIEW - Material Review with Presentation */}
         {currentStage === 'JURNAL_REVIEW' && (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
-                <div className="text-center max-w-2xl">
-                    <Clock size={64} className="mx-auto text-indigo-400 mb-6 animate-pulse" />
-                    <h1 className="text-4xl font-pixel text-white mb-4">POST-TEST</h1>
-                    <div className="bg-slate-800 border-2 border-slate-700 p-6 mb-6">
-                        <p className="text-xl text-slate-300 mb-4">
-                            Quiz akan dimulai sebentar lagi
-                        </p>
-                        <p className="text-lg text-indigo-400">
-                            Silahkan menunggu hingga asisten memulai quiz
-                        </p>
-                    </div>
-                    <div className="flex justify-center gap-2">
-                        <div className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
-                        <div className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
-                        <div className="w-3 h-3 bg-indigo-500 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
-                    </div>
+            <div className="space-y-6">
+                <div className="bg-indigo-900/50 border-2 border-indigo-500 p-6 text-center">
+                    <Presentation size={48} className="mx-auto text-indigo-400 mb-4" />
+                    <h1 className="text-3xl font-pixel text-white mb-2">REVIEW JURNAL</h1>
+                    <p className="text-indigo-300">Perhatikan pembahasan yang disampaikan oleh Asisten Praktikum</p>
                 </div>
+
+                {session.presentationPath ? (
+                    <PixelCard title="PRESENTATION">
+                        <PresentationViewer 
+                            liveSessionId={liveSessionId}
+                            presentationUrl={getFileUrl('materials', session.presentationPath)}
+                            initialSlide={session.currentSlide || 1}
+                        />
+                    </PixelCard>
+                ) : (
+                    <div className="text-center py-12 text-slate-500">
+                        <p>Menunggu asisten memulai presentasi...</p>
+                    </div>
+                )}
             </div>
         )}
 

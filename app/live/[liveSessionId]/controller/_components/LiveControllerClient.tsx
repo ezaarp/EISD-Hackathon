@@ -4,9 +4,11 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { PixelButton, PixelCard } from '@/components/ui';
-import { Play, Square, SkipForward, SkipBack, Users, Clock } from 'lucide-react';
+import { Play, Square, SkipForward, SkipBack, Users, Clock, Presentation } from 'lucide-react';
 import { StageType } from '@prisma/client';
 import { startLiveSession, changeStage, endLiveSession, backStage } from '@/app/actions/live-session';
+import PresentationViewer from '@/components/ui/PresentationViewer';
+import { getFileUrl } from '@/lib/supabase';
 
 const STAGES: StageType[] = [
   'OPENING',
@@ -144,6 +146,7 @@ export default function LiveControllerClient({ session, liveSessionId }: { sessi
     ? new Date(new Date(stageData.startedAt).getTime() + stageData.durationSec * 1000) 
     : null;
   const isTimedStage = currentStage && ['PRETEST', 'JURNAL', 'POSTTEST'].includes(currentStage);
+  const isReviewStage = currentStage && ['TP_REVIEW', 'JURNAL_REVIEW'].includes(currentStage);
 
   return (
     <div className="space-y-6">
@@ -161,6 +164,22 @@ export default function LiveControllerClient({ session, liveSessionId }: { sessi
             {currentStage}
           </div>
         </div>
+      )}
+
+      {/* Presentation Controller - Show during review stages */}
+      {isReviewStage && session.presentationPath && (
+        <PixelCard title="PRESENTATION CONTROLLER" color="bg-indigo-900/50">
+          <PresentationViewer 
+            liveSessionId={liveSessionId}
+            presentationUrl={getFileUrl('materials', session.presentationPath)}
+            initialSlide={session.currentSlide || 1}
+            isController={true}
+          />
+          <p className="text-xs text-indigo-300 mt-4 text-center">
+            <Presentation size={14} className="inline mr-2" />
+            Students will see the same slide in sync
+          </p>
+        </PixelCard>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

@@ -19,16 +19,7 @@ export default async function AsistenFeedbackPage() {
       targetId: session.user.id,
     },
     include: {
-      student: true,
-      liveSession: {
-        include: {
-          moduleWeek: {
-            include: {
-              course: true
-            }
-          }
-        }
-      }
+      student: true
     },
     orderBy: {
       createdAt: 'desc'
@@ -124,11 +115,9 @@ export default async function AsistenFeedbackPage() {
                   </div>
                 </div>
 
-                {feedback.liveSession && (
-                  <div className="text-xs text-indigo-400 mb-2">
-                    {feedback.liveSession.moduleWeek.course.code} - Week {feedback.liveSession.moduleWeek.weekNo}
-                  </div>
-                )}
+                <div className="text-xs text-indigo-400 mb-2">
+                  Feedback from live session
+                </div>
 
                 {feedback.comment && (
                   <div className="bg-slate-900 border border-slate-700 p-3 mt-3">
