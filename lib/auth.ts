@@ -13,6 +13,7 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         username: { label: 'Username', type: 'text', placeholder: 'NIM atau Kode Asprak' },
         password: { label: 'Password', type: 'password' },
+        roleGate: { label: 'Role Gate', type: 'text' },
       },
       async authorize(credentials) {
         if (!credentials?.username || !credentials?.password) {
@@ -35,6 +36,30 @@ export const authOptions: NextAuthOptions = {
 
         if (!isPasswordValid) {
           throw new Error('Username atau password salah');
+        }
+
+        // Enforce button-role mapping when provided
+        if (credentials.roleGate) {
+          const gate = credentials.roleGate as 'praktikan' | 'asisten' | 'dosen';
+          const role = user.role as UserRole;
+
+          const allowedRoles: Record<typeof gate, UserRole[]> = {
+            praktikan: [UserRole.PRAKTIKAN],
+            asisten: [
+              UserRole.ASISTEN,
+              UserRole.MEDIA,
+              UserRole.KOORDINATOR,
+              UserRole.SEKRETARIS,
+              UserRole.PUBLIKASI,
+              UserRole.KOMDIS,
+            ],
+            dosen: [UserRole.DOSEN, UserRole.LABORAN],
+          };
+
+          const allowed = allowedRoles[gate];
+          if (allowed && !allowed.includes(role)) {
+            throw new Error('Silakan login melalui tombol yang sesuai dengan peran Anda');
+          }
         }
 
         return {
