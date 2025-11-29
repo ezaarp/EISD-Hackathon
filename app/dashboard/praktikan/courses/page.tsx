@@ -33,8 +33,15 @@ export default async function StudentCoursesPage() {
     { href: '/dashboard/praktikan/grades', label: 'Grades', icon: 'Award' },
   ];
 
+  const layoutUser = {
+    id: session.user.id,
+    username: session.user.username,
+    name: session.user.name ?? null,
+    role: session.user.role,
+  };
+
   return (
-    <DashboardLayout user={session.user} navItems={navItems}>
+    <DashboardLayout user={layoutUser} navItems={navItems}>
       <div className="mb-8">
         <h1 className="text-3xl font-pixel text-white mb-2">MY COURSES</h1>
         <p className="text-slate-400">Courses you are enrolled in</p>

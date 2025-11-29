@@ -24,8 +24,15 @@ export default async function LiveControllerPage(props: { params: Promise<{ live
     { href: '/dashboard/publikasi/live-session', label: 'Live Session', icon: 'Radio' },
   ];
 
+  const layoutUser = {
+    id: session.user.id,
+    username: session.user.username,
+    name: session.user.name ?? null,
+    role: session.user.role,
+  };
+
   return (
-    <DashboardLayout user={session.user} navItems={navItems}>
+    <DashboardLayout user={layoutUser} navItems={navItems}>
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">

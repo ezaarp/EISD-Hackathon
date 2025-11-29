@@ -26,8 +26,15 @@ export default async function SettingsPage() {
     },
   });
 
+  const layoutUser = {
+    id: session.user.id,
+    username: session.user.username,
+    name: session.user.name ?? null,
+    role: session.user.role,
+  };
+
   return (
-    <DashboardLayout user={session.user} navItems={navItems}>
+    <DashboardLayout user={layoutUser} navItems={navItems}>
       <div className="mb-8">
         <h1 className="text-3xl font-pixel text-white mb-2">SYSTEM SETTINGS</h1>
         <p className="text-slate-400">Configure system parameters and preferences</p>

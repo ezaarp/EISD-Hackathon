@@ -49,8 +49,15 @@ export default async function EditLiveSessionPage(props: { params: Promise<{ ses
     { href: '/dashboard/publikasi/modules', label: 'Modules', icon: 'BookOpen' },
   ];
 
+  const layoutUser = {
+    id: session.user.id,
+    username: session.user.username,
+    name: session.user.name ?? null,
+    role: session.user.role,
+  };
+
   return (
-    <DashboardLayout user={session.user} navItems={navItems}>
+    <DashboardLayout user={layoutUser} navItems={navItems}>
       <div className="mb-8 flex items-center gap-4">
         <PixelButton href="/dashboard/publikasi/live-session" variant="outline" className="w-12 flex justify-center">
           <ArrowLeft size={20} />

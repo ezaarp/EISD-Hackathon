@@ -24,8 +24,15 @@ export default async function ModuleDetailPage(props: { params: Promise<{ module
 
   if (!moduleWeek) return <div>Module not found</div>;
 
+  const layoutUser = {
+    id: session.user.id,
+    username: session.user.username,
+    name: session.user.name ?? null,
+    role: session.user.role,
+  };
+
   return (
-    <DashboardLayout user={session.user} navItems={[{ href: '/dashboard/publikasi/modules', label: 'Back', icon: 'ArrowLeft' }]}>
+    <DashboardLayout user={layoutUser} navItems={[{ href: '/dashboard/publikasi/modules', label: 'Back', icon: 'ArrowLeft' }]}>
       <div className="mb-8">
         <h1 className="text-3xl font-pixel text-white mb-2">{moduleWeek.title}</h1>
         <p className="text-slate-400">Content Management</p>

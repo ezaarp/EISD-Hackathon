@@ -22,8 +22,15 @@ export default async function CoursesPage() {
       orderBy: { createdAt: 'desc' }
   });
 
+  const layoutUser = {
+    id: session.user.id,
+    username: session.user.username,
+    name: session.user.name ?? null,
+    role: session.user.role,
+  };
+
   return (
-    <DashboardLayout user={session.user} navItems={navItems}>
+    <DashboardLayout user={layoutUser} navItems={navItems}>
       <div className="mb-8 flex justify-between items-end">
         <div>
             <h1 className="text-3xl font-pixel text-white mb-2">COURSE MANAGEMENT</h1>

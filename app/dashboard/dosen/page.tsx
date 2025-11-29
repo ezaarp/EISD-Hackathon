@@ -22,8 +22,15 @@ export default async function DosenDashboard() {
   const grades = await prisma.grade.findMany({ where: { status: 'APPROVED' } });
   const avgScore = grades.length > 0 ? grades.reduce((a, b) => a + b.score, 0) / grades.length : 0;
 
+  const layoutUser = {
+    id: session.user.id,
+    username: session.user.username,
+    name: session.user.name ?? null,
+    role: session.user.role,
+  };
+
   return (
-    <DashboardLayout user={session.user} navItems={navItems}>
+    <DashboardLayout user={layoutUser} navItems={navItems}>
       <div className="mb-8">
         <h1 className="text-3xl font-pixel text-white mb-2">DOSEN SUPERVISOR</h1>
         <p className="text-slate-400">Overview of {course?.code || 'Active Course'}</p>
