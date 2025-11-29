@@ -49,6 +49,7 @@ export async function approveGrade(submissionId: string, finalScore?: number, fi
 
     let grade = await prisma.grade.findUnique({
         where: { submissionId },
+<<<<<<< HEAD
         include: {
             submission: {
                 include: {
@@ -56,6 +57,9 @@ export async function approveGrade(submissionId: string, finalScore?: number, fi
                 }
             }
         }
+=======
+        include: { submission: true }
+>>>>>>> b49d3bd73314a5d833ec9d00cc90958a5e615a3d
     });
 
     if (!grade) {
@@ -68,6 +72,7 @@ export async function approveGrade(submissionId: string, finalScore?: number, fi
                 status: 'PENDING',
                 breakdownJson: "{}"
             },
+<<<<<<< HEAD
             include: {
                 submission: {
                     include: {
@@ -85,11 +90,18 @@ export async function approveGrade(submissionId: string, finalScore?: number, fi
     // If task requires approval, set status to RECOMMENDED instead of APPROVED
     const gradeStatus = requiresApproval ? 'RECOMMENDED' : 'APPROVED';
 
+=======
+            include: { submission: true }
+        });
+    }
+
+>>>>>>> b49d3bd73314a5d833ec9d00cc90958a5e615a3d
     await prisma.grade.update({
         where: { id: grade.id },
         data: {
             score: finalScore !== undefined ? finalScore : grade.score,
             notes: finalNotes !== undefined ? finalNotes : grade.notes,
+<<<<<<< HEAD
             status: gradeStatus,
             approvedById: requiresApproval ? null : session.user.id,
             approvedAt: requiresApproval ? null : new Date()
@@ -100,11 +112,27 @@ export async function approveGrade(submissionId: string, finalScore?: number, fi
     await prisma.submission.update({
         where: { id: submissionId },
         data: { status: requiresApproval ? 'SUBMITTED' : 'GRADED' }
+=======
+            status: 'APPROVED',
+            approvedById: session.user.id,
+            approvedAt: new Date()
+        }
+    });
+
+    // Update submission status
+    await prisma.submission.update({
+        where: { id: submissionId },
+        data: { status: 'GRADED' }
+>>>>>>> b49d3bd73314a5d833ec9d00cc90958a5e615a3d
     });
 
     revalidatePath(`/dashboard/asisten/grading/${submissionId}`);
     revalidatePath('/dashboard/asisten/grading');
+<<<<<<< HEAD
     return { success: true, requiresApproval };
+=======
+    return { success: true };
+>>>>>>> b49d3bd73314a5d833ec9d00cc90958a5e615a3d
 }
 
 export async function rejectGrade(submissionId: string, reason: string) {
