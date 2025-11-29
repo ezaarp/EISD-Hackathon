@@ -34,9 +34,8 @@ export async function createCourse(data: {
         await prisma.course.create({
             data: {
                 ...baseData,
-                // @ts-expect-error - optional column for plaintext display
-                enrollPasswordPlain: data.enrollPassword
-            }
+                enrollPasswordPlain: data.enrollPassword,
+            } as Prisma.CourseCreateInput,
         });
     } catch (error) {
         if (error instanceof Prisma.PrismaClientValidationError && error.message.includes('enrollPasswordPlain')) {
