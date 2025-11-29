@@ -94,8 +94,15 @@ export default async function GradingPage() {
     (s) => s.grade && (s.grade.status === 'APPROVED' || s.grade.status === 'REJECTED')
   );
 
+  const layoutUser = {
+    id: session.user.id,
+    username: session.user.username,
+    name: session.user.name ?? null,
+    role: session.user.role,
+  };
+
   return (
-    <DashboardLayout user={session.user} navItems={navItems}>
+    <DashboardLayout user={layoutUser} navItems={navItems}>
       <div className="mb-8">
         <h1 className="text-3xl font-pixel text-white mb-2">GRADING QUEUE</h1>
         <p className="text-slate-400">Review and grade student submissions</p>
