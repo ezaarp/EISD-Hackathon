@@ -12,6 +12,18 @@ async function startSession(formData: FormData) {
   const shiftId = formData.get('shiftId') as string;
   const moduleWeekId = formData.get('moduleWeekId') as string;
   
+  const existingDraft = await prisma.liveSession.findFirst({
+    where: {
+      shiftId,
+      status: 'DRAFT',
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  if (existingDraft) {
+    return redirect(`/live/${existingDraft.id}/controller`);
+  }
+
   const result = await createLiveSession(shiftId, moduleWeekId);
   if (result.success) {
     redirect(`/live/${result.sessionId}/controller`);
@@ -21,6 +33,13 @@ async function startSession(formData: FormData) {
 export default async function LiveSessionDashboard() {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== 'PUBLIKASI') return redirect('/login');
+
+  const layoutUser = {
+    id: session.user.id,
+    username: session.user.username,
+    name: session.user.name ?? null,
+    role: session.user.role,
+  };
 
   const courses = await prisma.course.findMany({
     where: { isActive: true },
@@ -48,7 +67,7 @@ export default async function LiveSessionDashboard() {
   ];
 
   return (
-    <DashboardLayout user={session.user} navItems={navItems}>
+    <DashboardLayout user={layoutUser} navItems={navItems}>
       <div className="mb-8 flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-pixel text-white mb-2">LIVE SESSION CONTROL</h1>

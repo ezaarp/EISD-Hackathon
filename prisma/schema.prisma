@@ -194,6 +194,7 @@ model Course {
   title                String
   description          String?
   enrollPasswordHash   String   // Password untuk enroll
+  enrollPasswordPlain  String?  // Display-only password for Laboran
   semester             String   // e.g., "2024/2025 Genap"
   academicYear         String   // e.g., "2024/2025"
 

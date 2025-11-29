@@ -22,14 +22,55 @@ export async function submitMCQ(taskId: string, answers: Record<string, string>,
   let earnedPoints = 0;
   const processedAnswers: any[] = [];
 
+  const normalize = (value?: string | null) => (typeof value === 'string' ? value.trim() : '');
+  const parseOptions = (optionsJson?: string | null): string[] => {
+      if (!optionsJson) return [];
+      try {
+          const parsed = JSON.parse(optionsJson);
+          if (Array.isArray(parsed)) {
+              return parsed.map((opt) => (typeof opt === 'string' ? opt : String(opt)));
+          }
+      } catch (error) {
+          console.warn('Failed to parse options JSON', error);
+      }
+      return [];
+  };
+
   for (const question of task.questions) {
-      const studentAnswer = answers[question.id];
+      const studentAnswer = normalize(answers[question.id]);
       const points = question.points || 10; // Default points if not set
       totalPoints += points;
 
       if (studentAnswer) {
-          // Check answer
-          const isCorrect = question.answerKey?.correctAnswer === studentAnswer;
+          const rawAnswerKey = normalize(question.answerKey?.correctAnswer);
+          let isCorrect = false;
+
+          if (rawAnswerKey) {
+              // Primary: compare raw strings (covers numeric indexes stored as strings)
+              if (rawAnswerKey === studentAnswer) {
+                  isCorrect = true;
+              } else {
+                  const options = parseOptions(question.optionsJson);
+                  const studentIndex = Number(studentAnswer);
+
+                  // If answer key stored as option text, compare selected option text
+                  if (!Number.isNaN(studentIndex) && options[studentIndex]) {
+                      const selectedOption = normalize(options[studentIndex]);
+                      if (selectedOption && selectedOption.toLowerCase() === rawAnswerKey.toLowerCase()) {
+                          isCorrect = true;
+                      }
+                  }
+
+                  // If answer key stored as letter (A, B, C...), map to index
+                  if (!isCorrect && /^[A-Za-z]$/.test(rawAnswerKey) && !Number.isNaN(studentIndex)) {
+                      const letterIndex = rawAnswerKey.toUpperCase().charCodeAt(0) - 65;
+                      if (letterIndex === studentIndex) {
+                          isCorrect = true;
+                      }
+                  }
+              }
+          }
+
           if (isCorrect) {
               earnedPoints += points;
           }
@@ -85,29 +126,26 @@ export async function submitMCQ(taskId: string, answers: Record<string, string>,
       where: { submissionId: submissionId! }
   });
 
+  const gradeData = {
+    score: finalScore,
+    status: 'RECOMMENDED' as const,
+    gradedByAI: true,
+    notes: 'Auto-graded MCQ',
+    breakdownJson: JSON.stringify(processedAnswers),
+  };
+
   if (existingGrade) {
-      await prisma.grade.update({
-          where: { id: existingGrade.id },
-          data: {
-              score: finalScore,
-              status: 'APPROVED',
-              gradedByAI: true,
-              approvedAt: new Date(),
-              notes: 'Auto-graded MCQ'
-          }
-      });
+    await prisma.grade.update({
+      where: { id: existingGrade.id },
+      data: gradeData,
+    });
   } else {
-      await prisma.grade.create({
-          data: {
-              submission: { connect: { id: submissionId! } },
-              score: finalScore,
-              status: 'APPROVED',
-              gradedByAI: true,
-              approvedAt: new Date(),
-              notes: 'Auto-graded MCQ',
-              breakdownJson: JSON.stringify(processedAnswers)
-          }
-      });
+    await prisma.grade.create({
+      data: {
+        submission: { connect: { id: submissionId! } },
+        ...gradeData,
+      },
+    });
   }
 
   return {

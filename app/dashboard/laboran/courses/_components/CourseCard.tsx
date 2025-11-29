@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { PixelCard, PixelButton } from '@/components/ui';
-import AddShiftModal from './_components/AddShiftModal';
+import AddShiftModal from './AddShiftModal';
 
 export default function CourseCard({ course }: { course: any }) {
   const [showAddShift, setShowAddShift] = useState(false);
@@ -14,7 +14,7 @@ export default function CourseCard({ course }: { course: any }) {
           <h3 className="text-xl font-bold text-white">{course.title}</h3>
           <p className="text-slate-400 text-sm">{course.description}</p>
           <p className="text-xs text-emerald-400 mt-2 font-mono bg-slate-900 inline-block px-2 py-1 border border-emerald-900">
-             ENROLL PASS: {course.enrollPasswordHash ? '****' : 'N/A'} (See Seed/DB)
+             ENROLL PASS: {course.enrollPasswordPlain || 'N/A'}
           </p>
         </div>
 

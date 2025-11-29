@@ -24,8 +24,9 @@ export default function AddShiftModal({ courseId, onClose }: { courseId: string,
         maxCapacity: parseInt(formData.get('maxCapacity') as string),
       });
       onClose();
-    } catch (error) {
-      alert('Failed to create shift');
+    } catch (error: any) {
+      const message = error?.message || 'Failed to create shift';
+      alert(message);
     } finally {
       setLoading(false);
     }

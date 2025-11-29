@@ -8,29 +8,49 @@ import { prisma } from '@/lib/prisma';
 import { ArrowLeft, Upload, FileText, AlertCircle, Download } from 'lucide-react';
 import { getFileUrl } from '@/lib/supabase';
 
-// Helper function to safely parse JSON
-function safeParseJSON(jsonString: string | null): string[] {
-  if (!jsonString) return [];
+// Helper function to safely parse JSON-like option strings
+function safeParseJSON(jsonInput: string | string[] | null): string[] {
+  if (!jsonInput) return [];
 
-  try {
-    const parsed = JSON.parse(jsonString);
-    // Ensure it's an array
-    if (Array.isArray(parsed)) {
-      return parsed;
-    }
-    // If it's a string, try to split it or return as single item
-    if (typeof parsed === 'string') {
-      return [parsed];
-    }
-    return [];
-  } catch (error) {
-    console.error('Error parsing JSON:', error, 'Value:', jsonString);
-    // If parsing fails, try to return as single item if it's a string
-    if (typeof jsonString === 'string' && jsonString.length > 0) {
-      return [jsonString];
-    }
+  if (Array.isArray(jsonInput)) {
+    return jsonInput
+      .map((item) => (typeof item === 'string' ? item : JSON.stringify(item)))
+      .filter(Boolean);
+  }
+
+  if (typeof jsonInput !== 'string') {
     return [];
   }
+
+  const trimmed = jsonInput.trim();
+  if (!trimmed) return [];
+
+  const looksLikeJson = /^[\[\{"]/.test(trimmed);
+
+  if (looksLikeJson) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed.map((item) => (typeof item === 'string' ? item : JSON.stringify(item)));
+      }
+      if (typeof parsed === 'string') {
+        return [parsed];
+      }
+      if (parsed && typeof parsed === 'object') {
+        return Object.values(parsed).map((item) =>
+          typeof item === 'string' ? item : JSON.stringify(item)
+        );
+      }
+    } catch (error) {
+      console.warn('Failed to parse options JSON:', error, 'Value:', jsonInput);
+    }
+  }
+
+  // Fallback for plain text that is not valid JSON (e.g., comma/newline separated values)
+  return trimmed
+    .split(/[\r\n,;]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 export default async function TPSubmitPage(props: { params: Promise<{ assignmentId: string }> }) {

@@ -96,6 +96,32 @@ export async function createTask(formData: FormData) {
     revalidatePath(`/dashboard/publikasi/modules/${moduleWeekId}`);
 }
 
+export async function updateTask(formData: FormData) {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== 'PUBLIKASI') throw new Error('Unauthorized');
+
+    const taskId = formData.get('taskId') as string;
+    if (!taskId) throw new Error('Task ID is required');
+
+    const title = formData.get('title') as string;
+    const instructions = formData.get('instructions') as string;
+    const type = formData.get('type') as string | null;
+
+    await prisma.task.update({
+        where: { id: taskId },
+        data: {
+            title,
+            instructions,
+            ...(type ? { type } : {})
+        }
+    });
+
+    const task = await prisma.task.findUnique({ where: { id: taskId }, select: { moduleWeekId: true } });
+    if (task) {
+        revalidatePath(`/dashboard/publikasi/modules/${task.moduleWeekId}`);
+    }
+}
+
 export async function deleteTask(taskId: string) {
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== 'PUBLIKASI') throw new Error('Unauthorized');
@@ -150,6 +176,41 @@ export async function createQuestion(taskId: string, data: { prompt: string, typ
     revalidatePath(`/dashboard/publikasi/modules`); 
 }
 
+export async function updateQuestion(formData: FormData) {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== 'PUBLIKASI') throw new Error('Unauthorized');
+
+    const questionId = formData.get('questionId') as string;
+    if (!questionId) throw new Error('Question ID is required');
+
+    const prompt = formData.get('prompt') as string;
+    const correctAnswer = formData.get('correctAnswer') as string;
+    const points = parseFloat((formData.get('points') as string) || '0');
+    const optionsValue = formData.get('options');
+    const options = typeof optionsValue === 'string' ? optionsValue : '';
+
+    await prisma.question.update({
+        where: { id: questionId },
+        data: {
+            prompt,
+            points,
+            optionsJson: options || null
+        }
+    });
+
+    await prisma.answerKey.update({
+        where: { questionId },
+        data: {
+            correctAnswer
+        }
+    });
+
+    const question = await prisma.question.findUnique({ where: { id: questionId }, select: { task: { select: { moduleWeekId: true } } } });
+    if (question?.task.moduleWeekId) {
+        revalidatePath(`/dashboard/publikasi/modules/${question.task.moduleWeekId}`);
+    }
+}
+
 // Server action to start a TP (Tugas Pendahuluan) - Opens it for students
 export async function startTP(moduleWeekId: string) {
     const session = await getServerSession(authOptions);
@@ -181,4 +242,36 @@ export async function startTP(moduleWeekId: string) {
     revalidatePath('/dashboard/publikasi/modules');
     revalidatePath('/dashboard/praktikan');
     return { success: true };
+}
+
+export async function createModuleWeek(data: {
+    courseId: string;
+    weekNo: number;
+    title: string;
+    description?: string | null;
+    releaseAt: Date;
+    deadlineTP?: Date | null;
+}) {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== 'PUBLIKASI') throw new Error('Unauthorized');
+
+    if (!data.courseId || !data.weekNo || !data.title || !data.releaseAt) {
+        throw new Error('Missing required fields');
+    }
+
+    await prisma.moduleWeek.create({
+        data: {
+            courseId: data.courseId,
+            weekNo: data.weekNo,
+            title: data.title,
+            description: data.description || null,
+            releaseAt: data.releaseAt,
+            deadlineTP: data.deadlineTP || null,
+            hasCodeBased: false,
+            hasMCQ: false,
+            hasUploadOnly: false,
+        },
+    });
+
+    revalidatePath('/dashboard/publikasi/modules');
 }

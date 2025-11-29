@@ -87,7 +87,7 @@ export default async function GradingPage() {
   );
 
   const pendingSubmissions = submissions.filter(
-    (s) => !s.grade || s.grade.status === 'PENDING'
+    (s) => !s.grade || ['PENDING', 'RECOMMENDED'].includes(s.grade.status)
   );
 
   const gradedSubmissions = submissions.filter(

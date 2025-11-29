@@ -14,7 +14,11 @@ export default async function ModuleDetailPage(props: { params: Promise<{ module
       where: { id: params.moduleWeekId },
       include: { 
           contents: true,
-          tasks: { include: { questions: true } }
+          tasks: { 
+            include: { 
+              questions: { include: { answerKey: true } } 
+            } 
+          }
       }
   });
 

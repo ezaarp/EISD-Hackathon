@@ -10,7 +10,7 @@ import { startLiveSession, changeStage, endLiveSession, backStage } from '@/app/
 import PresentationViewer from '@/components/ui/PresentationViewer';
 import { getFileUrl } from '@/lib/supabase';
 
-const STAGES: StageType[] = [
+const DEFAULT_STAGES: StageType[] = [
   'OPENING',
   'ABSEN',
   'PRETEST',
@@ -21,7 +21,7 @@ const STAGES: StageType[] = [
   'FEEDBACK'
 ];
 
-const STAGE_DURATIONS: Record<StageType, number> = {
+const DEFAULT_STAGE_DURATIONS: Record<StageType, number> = {
   OPENING: 300, // 5 min
   ABSEN: 300,   // 5 min
   PRETEST: 600, // 10 min
@@ -32,7 +32,30 @@ const STAGE_DURATIONS: Record<StageType, number> = {
   FEEDBACK: 300, // 5 min
 };
 
+// Parse custom rundown from session notes
+function parseRundown(session: any): { stages: StageType[], durations: Record<StageType, number> } {
+  try {
+    if (session.notes) {
+      const notes = typeof session.notes === 'string' ? JSON.parse(session.notes) : session.notes;
+      if (notes.rundown && Array.isArray(notes.rundown)) {
+        const stages = notes.rundown.map((item: any) => item.type as StageType);
+        const durations: Record<StageType, number> = {};
+        notes.rundown.forEach((item: any) => {
+          durations[item.type as StageType] = item.durationSec;
+        });
+        return { stages, durations };
+      }
+    }
+  } catch (error) {
+    console.error('Failed to parse custom rundown:', error);
+  }
+  // Fallback to default
+  return { stages: DEFAULT_STAGES, durations: DEFAULT_STAGE_DURATIONS };
+}
+
 export default function LiveControllerClient({ session, liveSessionId }: { session: any, liveSessionId: string }) {
+  // Parse custom rundown or use default
+  const { stages: STAGES, durations: STAGE_DURATIONS } = parseRundown(session);
   const [currentStage, setCurrentStage] = useState<StageType | null>(
     session.stages.length > 0 ? session.stages[session.stages.length - 1].type : null
   );

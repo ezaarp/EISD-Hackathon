@@ -10,26 +10,48 @@ import { submitMCQ, submitCode, uploadEvidence } from '@/app/actions/submission'
 import PresentationViewer from '@/components/ui/PresentationViewer';
 import { getFileUrl } from '@/lib/supabase';
 
-// Helper function to safely parse JSON
-function safeParseJSON(jsonString: string | null): string[] {
-  if (!jsonString) return [];
+// Helper function to safely parse JSON-like option strings
+function safeParseJSON(jsonInput: string | string[] | null): string[] {
+  if (!jsonInput) return [];
 
-  try {
-    const parsed = JSON.parse(jsonString);
-    if (Array.isArray(parsed)) {
-      return parsed;
-    }
-    if (typeof parsed === 'string') {
-      return [parsed];
-    }
-    return [];
-  } catch (error) {
-    console.error('Error parsing options JSON:', error);
-    if (typeof jsonString === 'string' && jsonString.length > 0) {
-      return [jsonString];
-    }
+  if (Array.isArray(jsonInput)) {
+    return jsonInput
+      .map((item) => (typeof item === 'string' ? item : JSON.stringify(item)))
+      .filter(Boolean);
+  }
+
+  if (typeof jsonInput !== 'string') {
     return [];
   }
+
+  const trimmed = jsonInput.trim();
+  if (!trimmed) return [];
+
+  const looksLikeJson = /^[\[\{"]/.test(trimmed);
+
+  if (looksLikeJson) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed.map((item) => (typeof item === 'string' ? item : JSON.stringify(item)));
+      }
+      if (typeof parsed === 'string') {
+        return [parsed];
+      }
+      if (parsed && typeof parsed === 'object') {
+        return Object.values(parsed).map((item) =>
+          typeof item === 'string' ? item : JSON.stringify(item)
+        );
+      }
+    } catch (error) {
+      console.warn('Failed to parse options JSON:', error, 'Value:', jsonInput);
+    }
+  }
+
+  return trimmed
+    .split(/[\r\n,;]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 export default function StudentLiveClient({ session, liveSessionId, userId }: { session: any, liveSessionId: string, userId: string }) {

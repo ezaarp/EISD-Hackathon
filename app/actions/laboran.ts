@@ -25,6 +25,7 @@ export async function createCourse(data: {
             title: data.title,
             description: data.description,
             enrollPasswordHash: hashedPassword,
+            enrollPasswordPlain: data.enrollPassword,
             semester: data.semester,
             academicYear: data.academicYear,
             createdById: session.user.id
@@ -47,18 +48,25 @@ export async function createShift(courseId: string, data: {
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== 'LABORAN') throw new Error('Unauthorized');
 
-    await prisma.shift.create({
-        data: {
-            courseId,
-            shiftNo: data.shiftNo,
-            name: data.name,
-            day: data.day,
-            startTime: data.startTime,
-            endTime: data.endTime,
-            room: data.room,
-            maxCapacity: data.maxCapacity
+    try {
+        await prisma.shift.create({
+            data: {
+                courseId,
+                shiftNo: data.shiftNo,
+                name: data.name,
+                day: data.day,
+                startTime: data.startTime,
+                endTime: data.endTime,
+                room: data.room,
+                maxCapacity: data.maxCapacity
+            }
+        });
+    } catch (error: any) {
+        if (error?.code === 'P2002') {
+            throw new Error('Shift number already exists for this course. Choose a different shift number.');
         }
-    });
+        throw error;
+    }
 
     revalidatePath('/dashboard/laboran/courses');
     return { success: true };

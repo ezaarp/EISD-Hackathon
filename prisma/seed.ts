@@ -180,6 +180,7 @@ async function main() {
       title: 'Web Application Design 2025',
       description: 'Practical course on modern web development with React and Next.js',
       enrollPasswordHash: coursePassword,
+      enrollPasswordPlain: 'WAD2025',
       semester: '2024/2025 Genap',
       academicYear: '2024/2025',
       createdById: laboran.id,

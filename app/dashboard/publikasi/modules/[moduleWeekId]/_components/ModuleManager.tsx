@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { createContent, createTask, createQuestion, uploadMaterial, deleteContent, deleteTask } from '@/app/actions/publikasi';
+import { createContent, createTask, createQuestion, uploadMaterial, deleteContent, deleteTask, updateTask, updateQuestion } from '@/app/actions/publikasi';
 import { PixelCard, PixelButton } from '@/components/ui';
 import { FileText, Plus, X, Trash2, Edit, Upload, Play } from 'lucide-react';
 
@@ -9,6 +9,8 @@ export default function ModuleManager({ moduleWeek }: { moduleWeek: any }) {
   const [showAddMaterial, setShowAddMaterial] = useState(false);
   const [showAddTask, setShowAddTask] = useState(false);
   const [showAddQuestion, setShowAddQuestion] = useState<string | null>(null); // Task ID
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleAddMaterial = async (formData: FormData) => {
@@ -80,6 +82,32 @@ export default function ModuleManager({ moduleWeek }: { moduleWeek: any }) {
           window.location.reload();
       } catch (e: any) {
           alert('Failed to add question: ' + e.message);
+      } finally {
+          setLoading(false);
+      }
+  };
+
+  const handleEditTask = async (formData: FormData) => {
+      setLoading(true);
+      try {
+          await updateTask(formData);
+          setEditingTaskId(null);
+          window.location.reload();
+      } catch (e: any) {
+          alert('Failed to update task: ' + e.message);
+      } finally {
+          setLoading(false);
+      }
+  };
+
+  const handleEditQuestion = async (formData: FormData) => {
+      setLoading(true);
+      try {
+          await updateQuestion(formData);
+          setEditingQuestionId(null);
+          window.location.reload();
+      } catch (e: any) {
+          alert('Failed to update question: ' + e.message);
       } finally {
           setLoading(false);
       }
@@ -177,6 +205,9 @@ export default function ModuleManager({ moduleWeek }: { moduleWeek: any }) {
                                 <span className="font-bold text-emerald-400 uppercase">{t.type}</span>
                                 <div className="flex items-center gap-2">
                                     <span className="text-xs text-slate-500">{t.questions.length} Questions</span>
+                                    <button onClick={() => setEditingTaskId(prev => prev === t.id ? null : t.id)} className="text-indigo-400 hover:text-indigo-300">
+                                        <Edit size={16} />
+                                    </button>
                                     <button onClick={() => handleDeleteTask(t.id)} className="text-rose-500 hover:text-rose-400">
                                         <Trash2 size={16} />
                                     </button>
@@ -195,11 +226,104 @@ export default function ModuleManager({ moduleWeek }: { moduleWeek: any }) {
                             {/* Questions List */}
                             <div className="pl-4 border-l-2 border-slate-800 mb-4 space-y-2">
                                 {t.questions.map((q: any, idx: number) => (
-                                    <div key={q.id} className="text-xs text-slate-400 truncate">
-                                        {idx + 1}. {q.prompt}
+                                    <div key={q.id} className="text-xs text-slate-400">
+                                        <div className="flex justify-between items-center gap-2">
+                                            <span className="truncate">{idx + 1}. {q.prompt}</span>
+                                            <button
+                                                onClick={() => setEditingQuestionId(prev => prev === q.id ? null : q.id)}
+                                                className="text-emerald-400 hover:text-emerald-300"
+                                            >
+                                                <Edit size={12} />
+                                            </button>
+                                        </div>
+
+                                        {editingQuestionId === q.id && (
+                                            <div className="mt-2 bg-black border border-slate-700 p-3 relative">
+                                                <button
+                                                    onClick={() => setEditingQuestionId(null)}
+                                                    className="absolute top-2 right-2 text-slate-400"
+                                                >
+                                                    <X size={12} />
+                                                </button>
+                                                <form action={handleEditQuestion} className="space-y-2">
+                                                    <input type="hidden" name="questionId" value={q.id} />
+                                                    <label className="text-[10px] text-slate-400 uppercase">Prompt</label>
+                                                    <textarea
+                                                        name="prompt"
+                                                        defaultValue={q.prompt}
+                                                        className="w-full bg-slate-900 p-2 text-xs border border-slate-700"
+                                                        required
+                                                    />
+                                                    {q.type === 'MCQ' && (
+                                                        <>
+                                                            <label className="text-[10px] text-slate-400 uppercase">Options JSON</label>
+                                                            <textarea
+                                                                name="options"
+                                                                defaultValue={q.optionsJson || ''}
+                                                                className="w-full bg-slate-900 p-2 text-xs border border-slate-700"
+                                                                placeholder='["Option A","Option B"]'
+                                                            />
+                                                        </>
+                                                    )}
+                                                    <label className="text-[10px] text-slate-400 uppercase">Correct Answer</label>
+                                                    <input
+                                                        name="correctAnswer"
+                                                        defaultValue={q.answerKey?.correctAnswer || ''}
+                                                        className="w-full bg-slate-900 p-2 text-xs border border-slate-700"
+                                                        required
+                                                    />
+                                                    <label className="text-[10px] text-slate-400 uppercase">Points</label>
+                                                    <input
+                                                        type="number"
+                                                        name="points"
+                                                        defaultValue={q.points || 10}
+                                                        className="w-full bg-slate-900 p-2 text-xs border border-slate-700"
+                                                        step="0.5"
+                                                        min="0"
+                                                        required
+                                                    />
+                                                    <PixelButton type="submit" variant="success" className="w-full text-xs" disabled={loading}>
+                                                        SAVE CHANGES
+                                                    </PixelButton>
+                                                </form>
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>
+
+                            {editingTaskId === t.id && (
+                                <div className="bg-black p-3 border border-slate-700 mb-4 relative">
+                                    <button onClick={() => setEditingTaskId(null)} className="absolute top-2 right-2 text-slate-400">
+                                        <X size={12} />
+                                    </button>
+                                    <form action={handleEditTask} className="space-y-2">
+                                        <input type="hidden" name="taskId" value={t.id} />
+                                        <label className="text-[10px] text-slate-400 uppercase">Type</label>
+                                        <input
+                                            name="type"
+                                            defaultValue={t.type}
+                                            className="w-full bg-slate-900 p-2 text-xs border border-slate-700"
+                                        />
+                                        <label className="text-[10px] text-slate-400 uppercase">Title</label>
+                                        <input
+                                            name="title"
+                                            defaultValue={t.title}
+                                            className="w-full bg-slate-900 p-2 text-xs border border-slate-700"
+                                            required
+                                        />
+                                        <label className="text-[10px] text-slate-400 uppercase">Instructions (HTML)</label>
+                                        <textarea
+                                            name="instructions"
+                                            defaultValue={t.instructions || ''}
+                                            className="w-full bg-slate-900 p-2 text-xs border border-slate-700 min-h-[120px]"
+                                        />
+                                        <PixelButton type="submit" variant="primary" className="w-full text-xs" disabled={loading}>
+                                            SAVE TASK
+                                        </PixelButton>
+                                    </form>
+                                </div>
+                            )}
 
                             {!showAddQuestion ? (
                                 <PixelButton variant="outline" className="text-xs w-full" onClick={() => setShowAddQuestion(t.id)}>

@@ -82,22 +82,24 @@ export default function PlottingManager({ shifts, assistants }: { shifts: any[],
         {/* 2. Select Shift */}
         {selectedCourseId && (
             <PixelCard title="2. SELECT SHIFT">
-                <div className="flex gap-4 overflow-x-auto pb-2">
-                    {filteredShifts.map(shift => (
-                        <button
-                            key={shift.id}
-                            onClick={() => setSelectedShiftId(shift.id)}
-                            className={`px-4 py-2 font-pixel text-xs whitespace-nowrap transition-all ${
-                                selectedShiftId === shift.id
-                                ? 'bg-emerald-500 text-black translate-y-1'
-                                : 'bg-slate-700 text-white hover:bg-slate-600'
-                            }`}
+                {filteredShifts.length > 0 ? (
+                    <div className="space-y-2">
+                        <label className="text-xs text-slate-400 uppercase font-bold">Available Shifts</label>
+                        <select
+                            value={selectedShiftId}
+                            onChange={(e) => setSelectedShiftId(e.target.value)}
+                            className="w-full bg-slate-900 border-2 border-emerald-500 p-3 text-white font-pixel text-sm"
                         >
-                            {shift.name} ({shift.day})
-                        </button>
-                    ))}
-                    {filteredShifts.length === 0 && <p className="text-slate-500 text-xs">No shifts found for this course.</p>}
-                </div>
+                            {filteredShifts.map(shift => (
+                                <option key={shift.id} value={shift.id}>
+                                    {shift.name} — {shift.day} ({shift.startTime}-{shift.endTime})
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                ) : (
+                    <p className="text-slate-500 text-xs">No shifts found for this course.</p>
+                )}
             </PixelCard>
         )}
 
