@@ -35,13 +35,17 @@ export async function createCourse(data: {
             data: {
                 ...baseData,
                 enrollPasswordPlain: data.enrollPassword,
+                createdBy: { connect: { id: session.user.id } },
             } as Prisma.CourseCreateInput,
         });
     } catch (error) {
         if (error instanceof Prisma.PrismaClientValidationError && error.message.includes('enrollPasswordPlain')) {
             console.warn('[createCourse] enrollPasswordPlain column missing. Falling back to hashed-only storage. Run `npm run db:push` to sync schema.');
             await prisma.course.create({
-                data: baseData
+                data: {
+                    ...baseData,
+                    createdBy: { connect: { id: session.user.id } },
+                } as Prisma.CourseCreateInput,
             });
         } else {
             throw error;
