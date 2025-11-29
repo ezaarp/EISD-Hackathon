@@ -30,16 +30,12 @@ export async function createCourse(data: {
         createdById: session.user.id
     };
 
-    const dataWithPlain = {
-        ...baseData,
-    } as Prisma.CourseCreateInput;
-
-    // Attempt to include plaintext column when available in schema
-    (dataWithPlain as any).enrollPasswordPlain = data.enrollPassword;
-
     try {
         await prisma.course.create({
-            data: dataWithPlain,
+            data: {
+                ...baseData,
+                enrollPasswordPlain: data.enrollPassword,
+            } as Prisma.CourseCreateInput,
         });
     } catch (error) {
         if (error instanceof Prisma.PrismaClientValidationError && error.message.includes('enrollPasswordPlain')) {
