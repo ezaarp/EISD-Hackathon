@@ -168,3 +168,28 @@ export async function autoAssignStudentsToShift(shiftId: string, studentNims: st
 
     return { success: true, assignedCount };
 }
+
+export async function updateStudentAssignment(assignmentId: string, newPlottingId: string) {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== 'SEKRETARIS') throw new Error('Unauthorized');
+
+    await prisma.studentAssignment.update({
+        where: { id: assignmentId },
+        data: { plottingId: newPlottingId }
+    });
+
+    revalidatePath('/dashboard/sekretaris/plotting');
+    return { success: true };
+}
+
+export async function deletePlotting(plottingId: string) {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== 'SEKRETARIS') throw new Error('Unauthorized');
+
+    await prisma.plotting.delete({
+        where: { id: plottingId }
+    });
+
+    revalidatePath('/dashboard/sekretaris/plotting');
+    return { success: true };
+}
