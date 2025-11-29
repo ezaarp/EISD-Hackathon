@@ -42,8 +42,15 @@ export default async function ModuleDetailPage(props: { params: Promise<{ course
     { href: '/dashboard/praktikan/courses', label: 'Courses', icon: 'BookOpen' },
   ];
 
+  const layoutUser = {
+    id: session.user.id,
+    username: session.user.username,
+    name: session.user.name ?? null,
+    role: session.user.role,
+  };
+
   return (
-    <DashboardLayout user={session.user} navItems={navItems}>
+    <DashboardLayout user={layoutUser} navItems={navItems}>
       <div className="mb-8">
         <div className="flex items-center gap-4">
              <PixelButton href={`/courses/${params.courseId}/modules`} variant="outline" className="w-12 flex justify-center">
