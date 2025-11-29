@@ -10,7 +10,8 @@
       "Bash(if exist node_modules.prisma rmdir /s /q node_modules.prisma)",
       "Bash(npm install)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(test:*)"
     ],
     "deny": [],
     "ask": []
