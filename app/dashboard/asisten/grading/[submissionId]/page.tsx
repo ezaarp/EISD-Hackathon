@@ -66,8 +66,15 @@ export default async function SubmissionDetailPage(props: { params: Promise<{ su
     { href: '/dashboard/asisten/feedback', label: 'Feedback', icon: 'MessageSquare' },
   ];
 
+  const layoutUser = {
+    id: session.user.id,
+    username: session.user.username,
+    name: session.user.name ?? null,
+    role: session.user.role,
+  };
+
   return (
-    <DashboardLayout user={session.user} navItems={navItems}>
+    <DashboardLayout user={layoutUser} navItems={navItems}>
       <div className="mb-8 flex items-center gap-4">
         <PixelButton href="/dashboard/asisten/grading" variant="outline" className="w-12 flex justify-center">
           <ArrowLeft size={20} />
