@@ -1,6 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
@@ -19,18 +20,34 @@ export async function createCourse(data: {
 
     const hashedPassword = await bcrypt.hash(data.enrollPassword, 10);
 
-    await prisma.course.create({
-        data: {
-            code: data.code,
-            title: data.title,
-            description: data.description,
-            enrollPasswordHash: hashedPassword,
-            enrollPasswordPlain: data.enrollPassword,
-            semester: data.semester,
-            academicYear: data.academicYear,
-            createdById: session.user.id
+    const baseData = {
+        code: data.code,
+        title: data.title,
+        description: data.description,
+        enrollPasswordHash: hashedPassword,
+        semester: data.semester,
+        academicYear: data.academicYear,
+        createdById: session.user.id
+    };
+
+    try {
+        await prisma.course.create({
+            data: {
+                ...baseData,
+                // @ts-expect-error - optional column for plaintext display
+                enrollPasswordPlain: data.enrollPassword
+            }
+        });
+    } catch (error) {
+        if (error instanceof Prisma.PrismaClientValidationError && error.message.includes('enrollPasswordPlain')) {
+            console.warn('[createCourse] enrollPasswordPlain column missing. Falling back to hashed-only storage. Run `npm run db:push` to sync schema.');
+            await prisma.course.create({
+                data: baseData
+            });
+        } else {
+            throw error;
         }
-    });
+    }
 
     revalidatePath('/dashboard/laboran/courses');
     return { success: true };

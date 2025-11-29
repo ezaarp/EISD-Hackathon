@@ -1,4 +1,4 @@
-# 🎮 Pixel LMS - Project Summary
+# 🎮 LMS Laboratory - Project Summary
 
 ## ✅ What Has Been Built
 
@@ -398,7 +398,7 @@ Untuk production:
 # 1. Push to GitHub
 git init
 git add .
-git commit -m "Initial commit: Pixel LMS"
+git commit -m "Initial commit: LMS Laboratory"
 git branch -M main
 git remote add origin <your-repo-url>
 git push -u origin main

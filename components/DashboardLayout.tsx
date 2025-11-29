@@ -84,7 +84,7 @@ export default function DashboardLayout({ children, user, navItems }: DashboardL
             <div className="w-8 h-8 bg-emerald-500 border-2 border-white animate-pulse"></div>
             <div>
               <h1 className="text-white font-bold text-sm md:text-base uppercase tracking-wider">
-                Pixel LMS
+                LMS Laboratory
               </h1>
               <div className="text-[10px] text-emerald-400 flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>

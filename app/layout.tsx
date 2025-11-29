@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Pixel LMS - Laboratory Management System",
-  description: "Gamified Laboratory Management System dengan UI Pixel Style",
+  title: "LMS Laboratory - Management System",
+  description: "Laboratory Management System dengan UI Pixel Style",
 };
 
 export default function RootLayout({

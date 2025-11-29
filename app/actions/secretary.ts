@@ -73,7 +73,17 @@ export async function getShiftsAndAssistants() {
             plottings: { 
                 include: { 
                     assistant: true,
-                    studentAssignments: true // Include assignments to count students
+                    studentAssignments: {
+                        include: {
+                            student: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                    username: true
+                                }
+                            }
+                        }
+                    } // Include assignments + student data
                 } 
             } 
         },

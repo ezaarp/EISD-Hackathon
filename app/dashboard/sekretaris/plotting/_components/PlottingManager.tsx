@@ -137,8 +137,21 @@ export default function PlottingManager({ shifts, assistants }: { shifts: any[],
                                             </p>
                                         )}
                                         
-                                        <div className="mt-2 pt-2 border-t border-slate-700">
-                                            <p className="text-xs text-slate-400">
+                                        <div className="mt-3 pt-3 border-t border-slate-700 space-y-2">
+                                            <p className="text-xs text-slate-400 font-bold">Students</p>
+                                            {currentPlot?.studentAssignments?.length ? (
+                                                <ul className="space-y-1 text-[11px] text-slate-300 max-h-32 overflow-y-auto pr-1">
+                                                    {currentPlot.studentAssignments.map((assignment: any) => (
+                                                        <li key={assignment.id} className="flex justify-between gap-2 border-b border-slate-800 pb-1">
+                                                            <span className="truncate">{assignment.student?.name || 'Unknown'}</span>
+                                                            <span className="text-slate-500">{assignment.student?.username}</span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            ) : (
+                                                <p className="text-[11px] text-slate-500">Belum ada praktikan.</p>
+                                            )}
+                                            <p className="text-[11px] text-slate-500">
                                                 Max Capacity: 7 Students
                                             </p>
                                         </div>

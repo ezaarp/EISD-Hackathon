@@ -1,4 +1,4 @@
-# 🎮 Pixel LMS - Laboratory Management System
+# 🎮 LMS Laboratory - Management System
 
 Gamified Laboratory Management System dengan UI Pixel Style ala Codedex untuk Praktikum Telkom University.
 
